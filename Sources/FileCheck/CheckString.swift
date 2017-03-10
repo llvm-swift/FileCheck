@@ -85,22 +85,24 @@ struct CheckString {
     // Match itself from the last position after matching CHECK-DAG.
     let matchBuffer = buffer.substring(from: buffer.index(buffer.startIndex, offsetBy: lastPos))
     guard let range = self.pattern.match(matchBuffer, variableTable) else {
-      if self.pattern.fixedString.isEmpty {
-        diagnose(.error,
-                 at: self.loc,
-                 with: self.prefix + ": could not find a match for regex '\(self.pattern.regExPattern)' in input",
-          options: options
-        )
-      } else if self.pattern.regExPattern.isEmpty {
-        diagnose(.error,
-                 at: self.loc,
-                 with: self.prefix + ": could not find '\(self.pattern.fixedString)' in input",
-          options: options
-        )
+      if let rtm = self.pattern.computeRegexToMatch(variableTable) {
+        if !self.pattern.fixedString.isEmpty {
+          diagnose(.error,
+                   at: self.loc,
+                   with: self.prefix + ": could not find '\(self.pattern.fixedString)' (with regex '\(rtm)') in input",
+            options: options
+          )
+        } else {
+          diagnose(.error,
+                   at: self.loc,
+                   with: self.prefix + ": could not find a match for regex '\(rtm)' in input",
+            options: options
+          )
+        }
       } else {
         diagnose(.error,
                  at: self.loc,
-                 with: self.prefix + ": could not find '\(self.pattern.fixedString)' (with regex '\(self.pattern.regExPattern)') in input",
+                 with: self.prefix + ": could not find '\(self.pattern.fixedString)' in input",
           options: options
         )
       }

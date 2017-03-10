@@ -208,14 +208,14 @@ final class Pattern {
             }
             self.addBackrefToRegEx(varParenNum)
           } else {
-            variableUses.append((name, regExPattern.characters.count))
+            variableUses.append((name, self.regExPattern.characters.count))
           }
           continue
         }
 
         // Handle [[foo:.*]].
         self.variableDefs[name] = curParen
-        regExPattern += "("
+        self.regExPattern += "("
         curParen += 1
 
         let (res, paren) = self.addRegExToRegEx(matchStr.substring(from: matchStr.index(after: ne.lowerBound)), curParen)
@@ -224,7 +224,7 @@ final class Pattern {
           return nil
         }
 
-        regExPattern += ")"
+        self.regExPattern += ")"
       }
 
       // Handle fixed string matches.
@@ -240,8 +240,8 @@ final class Pattern {
 
     if options.contains(.matchFullLines) {
       if !options.contains(.strictWhitespace) {
-        regExPattern += " *"
-        regExPattern += "$"
+        self.regExPattern += " *"
+        self.regExPattern += "$"
       }
     }
   }
@@ -276,29 +276,7 @@ final class Pattern {
     return "\(self.lineNumber + offset)"
   }
 
-  /// Matches the pattern string against the input buffer.
-  ///
-  /// This returns the position that is matched or npos if there is no match. If
-  /// there is a match, the range of the match is returned.
-  ///
-  /// The variable table provides the current values of filecheck variables and
-  /// is updated if this match defines new values.
-  func match(_ buffer : String, _ variableTable : BoxedTable) -> NSRange? {
-    // If this is the EOF pattern, match it immediately.
-    if self.type == .EOF {
-      return NSRange(location: buffer.utf8.count, length: 0)
-    }
-
-    // If this is a fixed string pattern, just match it now.
-    if !self.fixedString.isEmpty {
-      if let b = buffer.range(of: self.fixedString)?.lowerBound {
-        return NSRange(location: buffer.distance(from: buffer.startIndex, to: b), length: self.fixedString.utf8.count)
-      }
-      return nil
-    }
-
-    // Regex match.
-
+  func computeRegexToMatch(_ variableTable : BoxedTable) -> String? {
     // If there are variable uses, we need to create a temporary string with the
     // actual value.
     var regExToMatch = self.regExPattern
@@ -325,6 +303,35 @@ final class Pattern {
         regExToMatch.insert(contentsOf: value.characters, at: regExToMatch.index(regExToMatch.startIndex, offsetBy: offset + insertOffset))
         insertOffset += value.utf8.count
       }
+    }
+    return regExToMatch
+  }
+
+  /// Matches the pattern string against the input buffer.
+  ///
+  /// This returns the position that is matched or npos if there is no match. If
+  /// there is a match, the range of the match is returned.
+  ///
+  /// The variable table provides the current values of filecheck variables and
+  /// is updated if this match defines new values.
+  func match(_ buffer : String, _ variableTable : BoxedTable) -> NSRange? {
+    // If this is the EOF pattern, match it immediately.
+    if self.type == .EOF {
+      return NSRange(location: buffer.utf8.count, length: 0)
+    }
+
+    // If this is a fixed string pattern, just match it now.
+    if !self.fixedString.isEmpty {
+      if let b = buffer.range(of: self.fixedString)?.lowerBound {
+        return NSRange(location: buffer.distance(from: buffer.startIndex, to: b), length: self.fixedString.utf8.count)
+      }
+      return nil
+    }
+
+    // Regex match.
+
+    guard let regExToMatch = computeRegexToMatch(variableTable) else {
+      return nil
     }
 
     // Match the newly constructed regex.
