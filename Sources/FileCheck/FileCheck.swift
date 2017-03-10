@@ -118,9 +118,10 @@ public func fileCheckOutput(of FD : FileCheckFD = .stdout, withPrefixes prefixes
   let buf = contents.cString(using: .utf8)?.withUnsafeBufferPointer { buffer in
     return readCheckStrings(in: buffer, withPrefixes: validPrefixes, checkNot: checkNot, options: options, prefixRE)
   }
-  guard let checkStrings = buf else {
+  guard let checkStrings = buf, !checkStrings.isEmpty else {
     return false
   }
+
   return check(input: input, against: checkStrings, options: options)
 }
 

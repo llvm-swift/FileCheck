@@ -5,5 +5,6 @@ import XCTest
 #if !os(macOS)
 XCTMain([
   FileCheckSpec.allTests,
+  LineCountSpec.allTests,
 ])
 #endif

@@ -178,7 +178,7 @@ final class Pattern {
         let diagLoc = CheckLoc.inBuffer(pattern.baseAddress!, buf)
         for (i, c) in name.characters.enumerated() {
           if i == 0 && c == "@" {
-            if nameEnd == nil {
+            if nameEnd != nil {
               diagnose(.error, at: diagLoc, with: "invalid name in named regex definition", options: options)
               return nil
             }

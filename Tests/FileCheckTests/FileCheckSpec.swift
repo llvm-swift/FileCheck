@@ -92,6 +92,8 @@ class FileCheckSpec : XCTestCase {
 
   #if !os(macOS)
   static var allTests = testCase([
+    ("testWhitespace", testWhitespace),
+    ("testSame", testSame),
     ("testImplicitCheckNot", testImplicitCheckNot),
   ])
   #endif
