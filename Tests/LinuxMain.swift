@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import LLVMTests
+@testable import FileCheckTests
 
 #if !os(macOS)
 XCTMain([

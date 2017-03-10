@@ -8,7 +8,7 @@ matrix:
     osx_image: xcode8.2
     script:
     - swift test
-    - os: linux
+  - os: linux
     language: generic
     sudo: required
     dist: trusty

@@ -27,7 +27,6 @@ func diagnose(_ kind : DiagnosticKind, at loc : CheckLoc, with message : String,
   }
 }
 
-
 enum DiagnosticKind: String {
   case error
   case warning

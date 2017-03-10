@@ -214,7 +214,7 @@ private func findCheckType(in buf : UnsafeBufferPointer<CChar>, with prefix : St
     length: buf.count - (prefix.utf8.count + 1),
     encoding: .utf8,
     freeWhenDone: false
-    )!
+  )!
   if rest.hasPrefix("NEXT:") {
     return .next
   }
@@ -243,7 +243,8 @@ private func findCheckType(in buf : UnsafeBufferPointer<CChar>, with prefix : St
     "NOT-NEXT:",
     "SAME-NOT:",
     "NOT-SAME:",
-    ]
+  ]
+
   if badNotPrefixes.reduce(false, { (acc, s) in acc || rest.hasPrefix(s) }) {
     return .badNot
   }
@@ -493,12 +494,12 @@ private func check(input b : String, against checkStrings : [CheckString], optio
 
       checkRegion = checkRegion.substring(from: checkRegion.index(checkRegion.startIndex, offsetBy: NSMaxRange(range)))
     }
-
+    
     if j == checkStrings.count {
       break
     }
   }
-
+  
   // Success if no checks failed.
   return !failedChecks
 }
