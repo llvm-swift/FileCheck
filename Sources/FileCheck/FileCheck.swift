@@ -456,7 +456,7 @@ private func check(input b : String, against checkStrings : [CheckString], optio
   var failedChecks = false
 
   // This holds all the current filecheck variables.
-  var variableTable = BoxedTable()
+  var variableTable = [String:String]()
 
   var i = 0
   var j = 0
@@ -472,11 +472,12 @@ private func check(input b : String, against checkStrings : [CheckString], optio
       }
 
       // Scan to next CHECK-LABEL match, ignoring CHECK-NOT and CHECK-DAG
-      guard let range = checkStr.check(buffer, true, variableTable, options) else {
+      guard let (range, mutVariableTable) = checkStr.check(buffer, true, variableTable, options) else {
         // Immediately bail of CHECK-LABEL fails, nothing else we can do.
         return false
       }
 
+      variableTable = mutVariableTable
       checkRegion = buffer.substring(to: buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range)))
       buffer = buffer.substring(from: buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range)))
       j += 1
@@ -487,12 +488,12 @@ private func check(input b : String, against checkStrings : [CheckString], optio
 
       // Check each string within the scanned region, including a second check
       // of any final CHECK-LABEL (to verify CHECK-NOT and CHECK-DAG)
-      guard let range = checkStrings[i].check(checkRegion, false, variableTable, options) else {
+      guard let (range, mutVarTable) = checkStrings[i].check(checkRegion, false, variableTable, options) else {
         failedChecks = true
         i = j
         break
       }
-
+      variableTable = mutVarTable
       checkRegion = checkRegion.substring(from: checkRegion.index(checkRegion.startIndex, offsetBy: NSMaxRange(range)))
     }
     

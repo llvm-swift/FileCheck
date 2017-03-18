@@ -63,28 +63,31 @@ struct CheckString {
   var dagNotStrings : Array<Pattern>
 
   /// Match check string and its "not strings" and/or "dag strings".
-  func check(_ buffer : String, _ isLabelScanMode : Bool,  _ variableTable : BoxedTable, _ options: FileCheckOptions) -> NSRange? {
+  func check(_ buffer : String, _ isLabelScanMode : Bool,  _ variableTable : [String:String], _ options: FileCheckOptions) -> (NSRange, [String:String])? {
     // This condition is true when we are scanning forward to find CHECK-LABEL
     // bounds we have not processed variable definitions within the bounded block
     // yet so cannot handle any final CHECK-DAG yet this is handled when going
     // over the block again (including the last CHECK-LABEL) in normal mode.
     let lastPos : Int
     let notStrings : [Pattern]
+    let initialTable : [String:String]
     if !isLabelScanMode {
       // Match "dag strings" (with mixed "not strings" if any).
-      guard let (lp, ns) = self.checkDAG(buffer, variableTable, options) else {
+      guard let (lp, ns, vt) = self.checkDAG(buffer, variableTable, options) else {
         return nil
       }
       lastPos = lp
       notStrings = ns
+      initialTable = vt
     } else {
       lastPos = 0
       notStrings = []
+      initialTable = variableTable
     }
 
     // Match itself from the last position after matching CHECK-DAG.
     let matchBuffer = buffer.substring(from: buffer.index(buffer.startIndex, offsetBy: lastPos))
-    guard let range = self.pattern.match(matchBuffer, variableTable) else {
+    guard let (range, mutVariableTable) = self.pattern.match(matchBuffer, initialTable) else {
       if let rtm = self.pattern.computeRegexToMatch(variableTable) {
         if !self.pattern.fixedString.isEmpty {
           diagnose(.error,
@@ -112,12 +115,14 @@ struct CheckString {
 
     // Similar to the above, in "label-scan mode" we can't yet handle CHECK-NEXT
     // or CHECK-NOT
+    let finalTable : [String:String]
     if !isLabelScanMode {
+      let startIdx = buffer.index(buffer.startIndex, offsetBy: lastPos)
       let skippedRegion = buffer.substring(
         with: Range<String.Index>(
           uncheckedBounds: (
-            buffer.index(buffer.startIndex, offsetBy: lastPos),
-            buffer.index(buffer.startIndex, offsetBy: matchPos)
+            startIdx,
+            buffer.index(startIdx, offsetBy: matchPos)
           )
         )
       )
@@ -137,12 +142,16 @@ struct CheckString {
 
       // If this match had "not strings", verify that they don't exist in the
       // skipped region.
-      if self.checkNot(skippedRegion, notStrings, variableTable, options) {
+      let (cond, variableTable) = self.checkNot(skippedRegion, notStrings, mutVariableTable, options)
+      finalTable = variableTable
+      if cond {
         return nil
       }
+    } else {
+      finalTable = mutVariableTable
     }
 
-    return NSRange(location: lastPos + matchPos, length: matchLen)
+    return (NSRange(location: lastPos + matchPos, length: matchLen), finalTable)
   }
 
   /// Verify there is no newline in the given buffer.
@@ -226,11 +235,11 @@ struct CheckString {
   }
 
   /// Verify there's no "not strings" in the given buffer.
-  private func checkNot(_ buffer : String, _ notStrings : [Pattern], _ variableTable : BoxedTable, _ options: FileCheckOptions) -> Bool {
+  private func checkNot(_ buffer : String, _ notStrings : [Pattern], _ variableTable : [String:String], _ options: FileCheckOptions) -> (Bool, [String:String]) {
     for pat in notStrings {
       assert(pat.type == .not, "Expect CHECK-NOT!")
 
-      guard let range = pat.match(buffer, variableTable) else {
+      guard let (range, variableTable) = pat.match(buffer, variableTable) else {
         continue
       }
       buffer.cString(using: .utf8)?.withUnsafeBufferPointer { buf in
@@ -238,22 +247,23 @@ struct CheckString {
         diagnose(.error, at: loc, with: self.prefix + "-NOT: string occurred!", options: options)
       }
       diagnose(.note, at: pat.patternLoc, with: self.prefix + "-NOT: pattern specified here", options: options)
-      return true
+      return (true, variableTable)
     }
 
-    return false
+    return (false, variableTable)
   }
 
   /// Match "dag strings" and their mixed "not strings".
-  func checkDAG(_ buffer : String, _ variableTable : BoxedTable, _ options: FileCheckOptions) -> (Int, [Pattern])? {
+  func checkDAG(_ buffer : String, _ variableTable : [String:String], _ options: FileCheckOptions) -> (Int, [Pattern], [String:String])? {
     var notStrings = [Pattern]()
-    if dagNotStrings.isEmpty {
-      return (0, notStrings)
+    if self.dagNotStrings.isEmpty {
+      return (0, notStrings, variableTable)
     }
 
     var lastPos = 0
     var startPos = lastPos
 
+    var finalTable : [String:String] = variableTable
     for pattern in self.dagNotStrings {
       assert((pattern.type == .dag || pattern.type == .not), "Invalid CHECK-DAG or CHECK-NOT!")
 
@@ -268,10 +278,11 @@ struct CheckString {
       let matchBuffer = buffer.substring(from: buffer.index(buffer.startIndex, offsetBy: startPos))
       // With a group of CHECK-DAGs, a single mismatching means the match on
       // that group of CHECK-DAGs fails immediately.
-      guard let range = pattern.match(matchBuffer, variableTable) else {
+      guard let (range, variableTable) = pattern.match(matchBuffer, finalTable) else {
         //				PrintCheckFailed(SM, Pat.getLoc(), Pat, MatchBuffer, VariableTable)
         return nil
       }
+      finalTable = variableTable
 
       // Re-calc it as the offset relative to the start of the original string.
       let matchPos = range.location + startPos
@@ -302,9 +313,11 @@ struct CheckString {
             )
           )
         )
-        if self.checkNot(skippedRegion, notStrings, variableTable, options) {
+        let (cond, mutVarTable) = self.checkNot(skippedRegion, notStrings, finalTable, options)
+        if cond {
           return nil
         }
+        finalTable = mutVarTable
         // Clear "not strings".
         notStrings.removeAll()
       }
@@ -313,6 +326,6 @@ struct CheckString {
       lastPos = max(matchPos + range.length, lastPos)
     }
     
-    return (lastPos, notStrings)
+    return (lastPos, notStrings, finalTable)
   }
 }

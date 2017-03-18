@@ -234,6 +234,7 @@ final class Pattern {
         patternStr = patternStr.substring(from: fixedMatchEnd)
       } else {
         // No more matches, time to quit.
+        self.regExPattern += NSRegularExpression.escapedPattern(for: patternStr)
         break
       }
     }
@@ -276,7 +277,7 @@ final class Pattern {
     return "\(self.lineNumber + offset)"
   }
 
-  func computeRegexToMatch(_ variableTable : BoxedTable) -> String? {
+  func computeRegexToMatch(_ variableTable : [String:String]) -> String? {
     // If there are variable uses, we need to create a temporary string with the
     // actual value.
     var regExToMatch = self.regExPattern
@@ -314,16 +315,16 @@ final class Pattern {
   ///
   /// The variable table provides the current values of filecheck variables and
   /// is updated if this match defines new values.
-  func match(_ buffer : String, _ variableTable : BoxedTable) -> NSRange? {
+  func match(_ buffer : String, _ variableTable : [String:String]) -> (NSRange, [String:String])? {
     // If this is the EOF pattern, match it immediately.
     if self.type == .EOF {
-      return NSRange(location: buffer.utf8.count, length: 0)
+      return (NSRange(location: buffer.utf8.count, length: 0), variableTable)
     }
 
     // If this is a fixed string pattern, just match it now.
     if !self.fixedString.isEmpty {
       if let b = buffer.range(of: self.fixedString)?.lowerBound {
-        return NSRange(location: buffer.distance(from: buffer.startIndex, to: b), length: self.fixedString.utf8.count)
+        return (NSRange(location: buffer.distance(from: buffer.startIndex, to: b), length: self.fixedString.utf8.count), variableTable)
       }
       return nil
     }
@@ -346,6 +347,7 @@ final class Pattern {
     }
 
     // If this defines any variables, remember their values.
+    var mutTable = variableTable
     for (v, index) in self.variableDefs {
       assert(index < fullMatch.numberOfRanges, "Internal paren error")
       #if os(macOS)
@@ -353,7 +355,7 @@ final class Pattern {
       #else
         let r = fullMatch.range(at: index)
       #endif
-      variableTable[v] = buffer.substring(
+      mutTable[v] = buffer.substring(
         with: Range<String.Index>(
           uncheckedBounds: (
             buffer.index(buffer.startIndex, offsetBy: r.location),
@@ -363,7 +365,7 @@ final class Pattern {
       )
     }
 
-    return fullMatch.range
+    return (fullMatch.range, mutTable)
   }
 
   /// Finds the closing sequence of a regex variable usage or definition.
