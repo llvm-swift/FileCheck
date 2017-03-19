@@ -52,6 +52,33 @@ class FileCheckSpec : XCTestCase {
     })
   }
 
+  func testCheckDAG() {
+    XCTAssert(fileCheckOutput(withPrefixes: ["TESTDAG"]) {
+      print("")
+      // TESTDAG-DAG: add [[REG1:r[0-9]+]], r1, r2
+      print("add r10, r1, r2")
+      // TESTDAG-DAG: add [[REG2:r[0-9]+]], r3, r4
+      print("add r11, r3, r4")
+      // TESTDAG: mul r5, [[REG1]], [[REG2]]
+      print("mul r5, r10, r11")
+
+      // TESTDAG-DAG: mul [[REG1:r[0-9]+]], r1, r2
+      print("mul r11, r3, r4")
+      // TESTDAG-DAG: mul [[REG2:r[0-9]+]], r3, r4
+      print("mul r10, r1, r2")
+      // TESTDAG: add r5, [[REG1]], [[REG2]]
+      print("add r5, r10, r11")
+
+      // TESTDAG-DAG: add [[REG1:r[0-9]+]], r1, r2
+      // TESTDAG-DAG: add [[REG2:r[0-9]+]], r3, r4
+      // TESTDAG-NOT: xor
+      // TESTDAG-DAG: mul r5, [[REG1]], [[REG2]]
+      print("add r11, r3, r4")
+      print("add r10, r1, r2")
+      print("mul r5, r10, r11")
+    })
+  }
+
   func testImplicitCheckNot() {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-NOTCHECK"]) {
       // CHECK-NOTCHECK: error: NOTCHECK-NOT: string occurred!
