@@ -1,11 +1,3 @@
-//
-//  CheckString.swift
-//  FileCheck
-//
-//  Created by Robert Widmann on 3/9/17.
-//
-//
-
 import Foundation
 
 enum CheckType {

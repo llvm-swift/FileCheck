@@ -1,11 +1,3 @@
-//
-//  Diagnostics.swift
-//  FileCheck
-//
-//  Created by Robert Widmann on 3/9/17.
-//
-//
-
 import Foundation
 
 func diagnose(_ kind : DiagnosticKind, at loc : CheckLoc, with message : String, options: FileCheckOptions) {
