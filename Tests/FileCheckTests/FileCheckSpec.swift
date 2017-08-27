@@ -117,11 +117,22 @@ class FileCheckSpec : XCTestCase {
     })
   }
 
+  func testUndefinedVariablePattern() {
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-UNDEFINED-VAR-MSG"]) {
+      // CHECK-UNDEFINED-VAR-MSG: note: uses undefined variable 'UNDEFINED'
+      XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-UNDEFINED-VAR"], options: [.disableColors]) {
+        // CHECK-UNDEFINED-VAR: [[UNDEFINED]]
+        print("-")
+      })
+    })
+  }
+
   #if !os(macOS)
   static var allTests = testCase([
     ("testWhitespace", testWhitespace),
     ("testSame", testSame),
     ("testImplicitCheckNot", testImplicitCheckNot),
+    ("testUndefinedVariablePattern", testUndefinedVariablePattern)
   ])
   #endif
 }

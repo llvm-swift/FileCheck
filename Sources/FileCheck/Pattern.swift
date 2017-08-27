@@ -254,7 +254,7 @@ final class Pattern {
   }
 
   /// - returns: Returns a value on success or nil on a syntax error.
-  private func evaluateExpression(_ e : String) -> String? {
+  internal func evaluateExpression(_ e : String) -> String? {
     var expr = e
     // The only supported expression is @LINE([\+-]\d+)?
     if !expr.hasPrefix("@LINE") {
@@ -350,11 +350,7 @@ final class Pattern {
     var mutTable = variableTable
     for (v, index) in self.variableDefs {
       assert(index < fullMatch.numberOfRanges, "Internal paren error")
-      #if os(macOS)
-        let r = fullMatch.rangeAt(index)
-      #else
-        let r = fullMatch.range(at: index)
-      #endif
+      let r = fullMatch.range(at: index)
       mutTable[v] = buffer.substring(
         with: Range<String.Index>(
           uncheckedBounds: (

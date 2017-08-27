@@ -296,7 +296,7 @@ private func findFirstMatch(in inbuffer : UnsafeBufferPointer<CChar>, among pref
     let bd = Data(buffer: buffer)
     let range = bd.range(of: prefixStr.data(using: .utf8)!)!
     buffer = buffer.dropFront(range.lowerBound)
-    lineNumber += skippedPrefix.characters.filter({ c in c == "\n" }).count
+    lineNumber += (skippedPrefix.characters.filter({ c in c == "\n" }) as [Character]).count
     // Check that the matched prefix isn't a suffix of some other check-like
     // word.
     // FIXME: This is a very ad-hoc check. it would be better handled in some

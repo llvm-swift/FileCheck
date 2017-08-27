@@ -101,6 +101,42 @@ struct CheckString {
           options: options
         )
       }
+
+      // Note any variables used by the pattern
+      for (varName, _) in self.pattern.variableUses {
+        if varName.first == "@" {
+          // If we failed with a builtin variable like @LINE, try to report
+          // what it is bound to.
+          if let value = self.pattern.evaluateExpression(varName) {
+            diagnose(.note,
+                     at: self.loc,
+                     with: "with expression '\(varName)' equal to '\(value)'",
+              options: options
+            )
+          } else {
+            // If evaluation fails, we must have an incorrect builtin variable.
+            diagnose(.note,
+                     at: self.loc,
+                     with: "uses incorrect expression '\(varName)'",
+              options: options
+            )
+          }
+        } else {
+          if let varDef = self.pattern.variableDefs[varName] {
+            diagnose(.note,
+                     at: self.loc,
+                     with: "with variable '\(varName)' equal to '\(varDef)'",
+              options: options
+            )
+          } else {
+            diagnose(.note,
+                     at: self.loc,
+                     with: "uses undefined variable '\(varName)'",
+              options: options
+            )
+          }
+        }
+      }
       return nil
     }
     let (matchPos, matchLen) = (range.location, range.length)

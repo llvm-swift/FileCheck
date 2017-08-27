@@ -18,6 +18,7 @@ class LineCountSpec : XCTestCase {
       // CHECK-LINECOUNT: [[@LINE]] {{a}}rst
       , "19"
       // 20 BAD-CHECK-LINECOUNT: [[@LINE:cant-have-regex]]
+      // 21 CHECK-LINECOUNT-MISSPELL: [[@RINE]]
     ]).joined(separator: "\n")
 
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-LINECOUNT"]) {
@@ -26,6 +27,13 @@ class LineCountSpec : XCTestCase {
 
     XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["BAD-CHECK-LINECOUNT"]) {
       print(txt)
+    })
+
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-LINECOUNT-MISSPELL-MSG"]) {
+      // CHECK-LINECOUNT-MISSPELL-MSG: note: uses incorrect expression '@RINE'
+      XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-LINECOUNT-MISSPELL"], options: [.disableColors]) {
+        print(txt)
+      })
     })
   }
   #if !os(macOS)
