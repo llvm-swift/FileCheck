@@ -137,6 +137,55 @@ struct CheckString {
           }
         }
       }
+
+      var NumLinesForward = 0
+      var BestLine : Int? = nil
+      var BestQuality = 0.0
+
+      for i in 0..<min(buffer.count, 4096) {
+        let exampleString : String
+        if pattern.fixedString.isEmpty {
+          exampleString = pattern.regExPattern
+        } else {
+          exampleString = pattern.fixedString
+        }
+
+        if exampleString.isEmpty {
+          break
+        }
+        
+        let char = buffer[buffer.index(buffer.startIndex, offsetBy: i)]
+        if char == "\n" {
+          NumLinesForward += 1
+        }
+
+        // Patterns have leading whitespace stripped, so skip whitespace when
+        // looking for something which looks like a pattern.
+        if char == " " || char == "\t" {
+          continue;
+        }
+
+        // Compute the "quality" of this match as an arbitrary combination of
+        // the match distance and the number of lines skipped to get to this
+        // match.
+        let distance = editDistance(from: Array(buffer.characters), to: Array(exampleString.characters))
+        let quality = Double(distance) + (Double(NumLinesForward) / 100.0)
+        if quality < BestQuality || BestLine == nil {
+          BestLine = i
+          BestQuality = quality
+        }
+      }
+
+      if let Best = BestLine, BestQuality < 50 {
+        buffer.utf8CString.withUnsafeBufferPointer { buf in
+          let otherPatternLoc = CheckLoc.inBuffer(
+            buf.baseAddress!.advanced(by: Best),
+            UnsafeBufferPointer(rebasing: buf.suffix(from: Best))
+          )
+          diagnose(.note, at: otherPatternLoc, with: "possible intended match here", options: options)
+        }
+      }
+
       return nil
     }
     let (matchPos, matchLen) = (range.location, range.length)

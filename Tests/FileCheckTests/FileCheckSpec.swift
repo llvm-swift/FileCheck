@@ -127,12 +127,26 @@ class FileCheckSpec : XCTestCase {
     })
   }
 
+  func testNearestPattern() {
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-NEAREST-PATTERN-MSG"]) {
+      // CHECK-NEAREST-PATTERN-MSG: error: {{.*}}: could not find 'Once more into the beach' (with regex '') in input
+      // CHECK-NEAREST-PATTERN-MSG-NEXT: // {{.*}}: Once more into the beach
+      // CHECK-NEAREST-PATTERN-MSG-NEXT: note: possible intended match here
+      // CHECK-NEAREST-PATTERN-MSG-NEXT: Once more into the breach
+      XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-NEAREST-PATTERN"], options: [.disableColors]) {
+        // CHECK-NEAREST-PATTERN: Once more into the beach
+        print("Once more into the breach")
+      })
+    })
+  }
+
   #if !os(macOS)
   static var allTests = testCase([
     ("testWhitespace", testWhitespace),
     ("testSame", testSame),
     ("testImplicitCheckNot", testImplicitCheckNot),
-    ("testUndefinedVariablePattern", testUndefinedVariablePattern)
+    ("testUndefinedVariablePattern", testUndefinedVariablePattern),
+    ("testNearestPattern", testNearestPattern),
   ])
   #endif
 }
