@@ -104,7 +104,7 @@ struct CheckString {
 
       // Note any variables used by the pattern
       for (varName, _) in self.pattern.variableUses {
-        if varName.first == "@" {
+        if varName.characters.first == "@" {
           // If we failed with a builtin variable like @LINE, try to report
           // what it is bound to.
           if let value = self.pattern.evaluateExpression(varName) {
@@ -142,7 +142,7 @@ struct CheckString {
       var BestLine : Int? = nil
       var BestQuality = 0.0
 
-      for i in 0..<min(buffer.count, 4096) {
+      for i in 0..<min(buffer.characters.count, 4096) {
         let exampleString : String
         if pattern.fixedString.isEmpty {
           exampleString = pattern.regExPattern
@@ -180,7 +180,7 @@ struct CheckString {
         buffer.utf8CString.withUnsafeBufferPointer { buf in
           let otherPatternLoc = CheckLoc.inBuffer(
             buf.baseAddress!.advanced(by: Best),
-            UnsafeBufferPointer(rebasing: buf.suffix(from: Best))
+            UnsafeBufferPointer(start: buf.baseAddress?.advanced(by: Best), count: buf.count - Best)
           )
           diagnose(.note, at: otherPatternLoc, with: "possible intended match here", options: options)
         }

@@ -350,7 +350,11 @@ final class Pattern {
     var mutTable = variableTable
     for (v, index) in self.variableDefs {
       assert(index < fullMatch.numberOfRanges, "Internal paren error")
-      let r = fullMatch.range(at: index)
+      #if os(macOS)
+        let r = fullMatch.rangeAt(index)
+      #else
+        let r = fullMatch.range(at: index)
+      #endif
       mutTable[v] = buffer.substring(
         with: Range<String.Index>(
           uncheckedBounds: (
