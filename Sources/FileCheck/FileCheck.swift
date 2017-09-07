@@ -265,7 +265,7 @@ extension UnsafeBufferPointer {
 func substring(in buffer : UnsafeBufferPointer<CChar>, with range : NSRange) -> String {
   precondition(range.location + range.length <= buffer.count)
   let ptr = buffer.substr(range.location, range.length)
-  return String(bytesNoCopy: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), length: range.length, encoding: .utf8, freeWhenDone: false)!
+  return String(bytesNoCopy: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), length: range.length, encoding: .utf8, freeWhenDone: false) ?? ""
 }
 
 private func findFirstMatch(in inbuffer : UnsafeBufferPointer<CChar>, among prefixes : [String], with RE : NSRegularExpression, startingAt startLine: Int) -> (String, CheckType, Int, UnsafeBufferPointer<CChar>) {
