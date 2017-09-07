@@ -105,9 +105,13 @@ public func fileCheckOutput(of FD : FileCheckFD = .stdout, withPrefixes prefixes
   }
 
   let input = overrideFDAndCollectOutput(file: FD, of: block)
-  if (input.isEmpty && !options.contains(.allowEmptyInput)) {
-    print("FileCheck error: input from file descriptor \(FD) is empty.\n")
-    return false
+  if input.isEmpty {
+    guard options.contains(.allowEmptyInput) else {
+      print("FileCheck error: input from file descriptor \(FD) is empty.\n")
+      return false
+    }
+    
+    return true
   }
 
   guard let contents = try? String(contentsOfFile: file, encoding: .utf8) else {
