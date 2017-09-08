@@ -80,112 +80,7 @@ struct CheckString {
     // Match itself from the last position after matching CHECK-DAG.
     let matchBuffer = buffer.substring(from: buffer.index(buffer.startIndex, offsetBy: lastPos))
     guard let (range, mutVariableTable) = self.pattern.match(matchBuffer, initialTable) else {
-      if let rtm = self.pattern.computeRegexToMatch(variableTable) {
-        if !self.pattern.fixedString.isEmpty {
-          diagnose(.error,
-                   at: self.loc,
-                   with: self.prefix + ": could not find '\(self.pattern.fixedString)' (with regex '\(rtm)') in input",
-            options: options
-          )
-        } else {
-          diagnose(.error,
-                   at: self.loc,
-                   with: self.prefix + ": could not find a match for regex '\(rtm)' in input",
-            options: options
-          )
-        }
-      } else {
-        diagnose(.error,
-                 at: self.loc,
-                 with: self.prefix + ": could not find '\(self.pattern.fixedString)' in input",
-          options: options
-        )
-      }
-
-      // Note any variables used by the pattern
-      for (varName, _) in self.pattern.variableUses {
-        if varName.characters.first == "@" {
-          // If we failed with a builtin variable like @LINE, try to report
-          // what it is bound to.
-          if let value = self.pattern.evaluateExpression(varName) {
-            diagnose(.note,
-                     at: self.loc,
-                     with: "with expression '\(varName)' equal to '\(value)'",
-              options: options
-            )
-          } else {
-            // If evaluation fails, we must have an incorrect builtin variable.
-            diagnose(.note,
-                     at: self.loc,
-                     with: "uses incorrect expression '\(varName)'",
-              options: options
-            )
-          }
-        } else {
-          if let varDef = self.pattern.variableDefs[varName] {
-            diagnose(.note,
-                     at: self.loc,
-                     with: "with variable '\(varName)' equal to '\(varDef)'",
-              options: options
-            )
-          } else {
-            diagnose(.note,
-                     at: self.loc,
-                     with: "uses undefined variable '\(varName)'",
-              options: options
-            )
-          }
-        }
-      }
-
-      var NumLinesForward = 0
-      var BestLine : Int? = nil
-      var BestQuality = 0.0
-
-      for i in 0..<min(buffer.characters.count, 4096) {
-        let exampleString : String
-        if pattern.fixedString.isEmpty {
-          exampleString = pattern.regExPattern
-        } else {
-          exampleString = pattern.fixedString
-        }
-
-        if exampleString.isEmpty {
-          break
-        }
-        
-        let char = buffer[buffer.index(buffer.startIndex, offsetBy: i)]
-        if char == "\n" {
-          NumLinesForward += 1
-        }
-
-        // Patterns have leading whitespace stripped, so skip whitespace when
-        // looking for something which looks like a pattern.
-        if char == " " || char == "\t" {
-          continue;
-        }
-
-        // Compute the "quality" of this match as an arbitrary combination of
-        // the match distance and the number of lines skipped to get to this
-        // match.
-        let distance = editDistance(from: Array(buffer.characters), to: Array(exampleString.characters))
-        let quality = Double(distance) + (Double(NumLinesForward) / 100.0)
-        if quality < BestQuality || BestLine == nil {
-          BestLine = i
-          BestQuality = quality
-        }
-      }
-
-      if let Best = BestLine, BestQuality < 50 {
-        buffer.utf8CString.withUnsafeBufferPointer { buf in
-          let otherPatternLoc = CheckLoc.inBuffer(
-            buf.baseAddress!.advanced(by: Best),
-            UnsafeBufferPointer(start: buf.baseAddress?.advanced(by: Best), count: buf.count - Best)
-          )
-          diagnose(.note, at: otherPatternLoc, with: "possible intended match here", options: options)
-        }
-      }
-
+      diagnoseFailedCheck(variableTable, options, buffer)
       return nil
     }
     let (matchPos, matchLen) = (range.location, range.length)
@@ -404,5 +299,113 @@ struct CheckString {
     }
     
     return (lastPos, notStrings, finalTable)
+  }
+
+  private func diagnoseFailedCheck(_ variableTable: [String : String], _ options: FileCheckOptions, _ buffer: String) {
+    if let rtm = self.pattern.computeRegexToMatch(variableTable) {
+      if !self.pattern.fixedString.isEmpty {
+        diagnose(.error,
+                 at: self.loc,
+                 with: self.prefix + ": could not find '\(self.pattern.fixedString)' (with regex '\(rtm)') in input",
+          options: options
+        )
+      } else {
+        diagnose(.error,
+                 at: self.loc,
+                 with: self.prefix + ": could not find a match for regex '\(rtm)' in input",
+          options: options
+        )
+      }
+    } else {
+      diagnose(.error,
+               at: self.loc,
+               with: self.prefix + ": could not find '\(self.pattern.fixedString)' in input",
+        options: options
+      )
+    }
+
+    // Note any variables used by the pattern
+    for (varName, _) in self.pattern.variableUses {
+      if varName.characters.first == "@" {
+        // If we failed with a builtin variable like @LINE, try to report
+        // what it is bound to.
+        if let value = self.pattern.evaluateExpression(varName) {
+          diagnose(.note,
+                   at: self.loc,
+                   with: "with expression '\(varName)' equal to '\(value)'",
+            options: options
+          )
+        } else {
+          // If evaluation fails, we must have an incorrect builtin variable.
+          diagnose(.note,
+                   at: self.loc,
+                   with: "uses incorrect expression '\(varName)'",
+            options: options
+          )
+        }
+      } else {
+        if let varDef = self.pattern.variableDefs[varName] {
+          diagnose(.note,
+                   at: self.loc,
+                   with: "with variable '\(varName)' equal to '\(varDef)'",
+            options: options
+          )
+        } else {
+          diagnose(.note,
+                   at: self.loc,
+                   with: "uses undefined variable '\(varName)'",
+            options: options
+          )
+        }
+      }
+    }
+
+    var NumLinesForward = 0
+    var BestLine : Int? = nil
+    var BestQuality = 0.0
+
+    for i in 0..<min(buffer.characters.count, 4096) {
+      let exampleString : String
+      if pattern.fixedString.isEmpty {
+        exampleString = pattern.regExPattern
+      } else {
+        exampleString = pattern.fixedString
+      }
+
+      if exampleString.isEmpty {
+        break
+      }
+
+      let char = buffer[buffer.index(buffer.startIndex, offsetBy: i)]
+      if char == "\n" {
+        NumLinesForward += 1
+      }
+
+      // Patterns have leading whitespace stripped, so skip whitespace when
+      // looking for something which looks like a pattern.
+      if char == " " || char == "\t" {
+        continue;
+      }
+
+      // Compute the "quality" of this match as an arbitrary combination of
+      // the match distance and the number of lines skipped to get to this
+      // match.
+      let distance = editDistance(from: Array(buffer.characters), to: Array(exampleString.characters))
+      let quality = Double(distance) + (Double(NumLinesForward) / 100.0)
+      if quality < BestQuality || BestLine == nil {
+        BestLine = i
+        BestQuality = quality
+      }
+    }
+
+    if let Best = BestLine, BestQuality < 50 {
+      buffer.utf8CString.withUnsafeBufferPointer { buf in
+        let otherPatternLoc = CheckLoc.inBuffer(
+          buf.baseAddress!.advanced(by: Best),
+          UnsafeBufferPointer(start: buf.baseAddress?.advanced(by: Best), count: buf.count - Best)
+        )
+        diagnose(.note, at: otherPatternLoc, with: "possible intended match here", options: options)
+      }
+    }
   }
 }

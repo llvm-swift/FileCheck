@@ -468,7 +468,7 @@ private func check(input b : String, against checkStrings : [CheckString], optio
       checkRegion = buffer
     } else {
       let checkStr = checkStrings[j]
-      if checkStr.pattern.type != .label {
+      guard checkStr.pattern.type == .label else {
         j += 1
         continue
       }

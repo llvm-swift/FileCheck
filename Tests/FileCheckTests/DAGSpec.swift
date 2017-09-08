@@ -14,7 +14,8 @@ class DAGSpec : XCTestCase {
       print("this is the string to be matched")
     })
   }
-
+  
+  #if swift(>=4)
   func testDAGWithInst() {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-INSTDAG"]) {
       // CHECK-INSTDAG-DAG: add [[REG1:r[0-9]+]], r1, r2
@@ -143,4 +144,5 @@ class DAGSpec : XCTestCase {
         """)
     })
   }
+  #endif
 }
