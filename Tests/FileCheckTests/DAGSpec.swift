@@ -15,7 +15,6 @@ class DAGSpec : XCTestCase {
     })
   }
   
-  #if swift(>=4)
   func testDAGWithInst() {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-INSTDAG"]) {
       // CHECK-INSTDAG-DAG: add [[REG1:r[0-9]+]], r1, r2
@@ -46,6 +45,7 @@ class DAGSpec : XCTestCase {
     })
   }
 
+  #if swift(>=4)
   func testDAGXFailWithInst() {
     XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["INSTDAG-XFAIL1"]) {
       // INSTDAG-XFAIL1: __x1
