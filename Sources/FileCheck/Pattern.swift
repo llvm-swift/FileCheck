@@ -336,7 +336,7 @@ final class Pattern {
     }
 
     // Match the newly constructed regex.
-    guard let r = try? NSRegularExpression(pattern: regExToMatch, options: []) else {
+    guard let r = try? NSRegularExpression(pattern: regExToMatch, options: [.anchorsMatchLines]) else {
       return nil
     }
     let matchInfo = r.matches(in: buffer, options: [], range: NSRange(location: 0, length: buffer.utf8.count))

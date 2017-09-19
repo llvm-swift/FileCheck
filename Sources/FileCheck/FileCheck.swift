@@ -475,7 +475,7 @@ private func check(input b : String, against checkStrings : [CheckString], optio
 
       // Scan to next CHECK-LABEL match, ignoring CHECK-NOT and CHECK-DAG
       guard let (range, mutVariableTable) = checkStr.check(buffer, true, variableTable, options) else {
-        // Immediately bail of CHECK-LABEL fails, nothing else we can do.
+        // Immediately bail if CHECK-LABEL fails, nothing else we can do.
         return false
       }
 
@@ -492,7 +492,7 @@ private func check(input b : String, against checkStrings : [CheckString], optio
       // of any final CHECK-LABEL (to verify CHECK-NOT and CHECK-DAG)
       guard let (range, mutVarTable) = checkStrings[i].check(checkRegion, false, variableTable, options) else {
         failedChecks = true
-        i = j
+        i = j-1
         break
       }
       variableTable = mutVarTable

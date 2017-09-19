@@ -80,7 +80,7 @@ struct CheckString {
     // Match itself from the last position after matching CHECK-DAG.
     let matchBuffer = buffer.substring(from: buffer.index(buffer.startIndex, offsetBy: lastPos))
     guard let (range, mutVariableTable) = self.pattern.match(matchBuffer, initialTable) else {
-      diagnoseFailedCheck(initialTable, options, buffer)
+      diagnoseFailedCheck(variableTable, options, buffer)
       return nil
     }
     let (matchPos, matchLen) = (range.location, range.length)
@@ -344,7 +344,7 @@ struct CheckString {
           )
         }
       } else {
-        if let varDef = variableTable[varName] {
+        if let varDef = self.pattern.variableDefs[varName] {
           diagnose(.note,
                    at: self.loc,
                    with: "with variable '\(varName)' equal to '\(varDef)'",
