@@ -97,7 +97,7 @@ public func fileCheckOutput(of FD : FileCheckFD = .stdout, withPrefixes prefixes
           "hyphens and underscores")
     return false
   }
-  guard let prefixRE = try? NSRegularExpression(pattern: validPrefixes.joined(separator: "|"), options: []) else {
+  guard let prefixRE = try? NSRegularExpression(pattern: validPrefixes.sorted(by: >).joined(separator: "|"), options: []) else {
     print("Unable to combine check-prefix strings into a prefix regular ",
           "expression! This is likely a bug in FileCheck's verification of ",
           "the check-prefix strings. Regular expression parsing failed.")

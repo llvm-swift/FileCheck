@@ -3,7 +3,7 @@ import XCTest
 import Foundation
 
 class LabelSpec : XCTestCase {
-  let output = {
+  let outputABC = {
     print([
       "label0:",
       "a",
@@ -32,11 +32,11 @@ class LabelSpec : XCTestCase {
       // CHECKOK-LABEL: {{^}}label2:
       // CHECKOK: {{^}}a
       // CHECKOK: {{^}}c
-      output()
+      outputABC()
     })
   }
 
-  func labelFail() {
+  func testLabelFail() {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECKERROR"]) {
       // CHECKERROR: error: CHECKFAIL: could not find a match for regex '(^)c' in input
       //
@@ -58,8 +58,28 @@ class LabelSpec : XCTestCase {
         // CHECKFAIL: {{^}}a
         // CHECKFAIL: {{^}}b
         // CHECKFAIL: {{^}}c
-        output()
+        outputABC()
       })
+    })
+  }
+
+  func testLabelDAG() {
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECKLABELDAG-ERROR"]) {
+      //    CHECKLABELDAG-ERROR: error: CHECKLABELDAG: could not find a match for regex '(^)foo' in input
+      XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["CHECKLABELDAG"], options: [.disableColors]) {
+        // CHECKLABELDAG-LABEL: {{^}}bar
+        // CHECKLABELDAG-DAG: {{^}}foo
+        // CHECKLABELDAG-LABEL: {{^}}zed
+        print(["bar", "zed"].joined(separator: "\n"))
+      })
+    })
+
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECKLABELDAGCAPTURE"], options: [.disableColors]) {
+      // CHECKLABELDAGCAPTURE-LABEL: {{^}}bar
+      // CHECKLABELDAGCAPTURE: {{^}}[[FOO:foo]]
+      // CHECKLABELDAGCAPTURE-DAG: {{^}}[[FOO]]
+      // CHECKLABELDAGCAPTURE-LABEL: {{^}}zed
+      print(["bar", "foo", "foo", "zed"].joined(separator: "\n"))
     })
   }
 }
