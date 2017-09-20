@@ -112,7 +112,7 @@ final class Pattern {
       // RegEx matches.
       if patternStr.range(of: "{{")?.lowerBound == patternStr.startIndex {
         // This is the start of a regex match.  Scan for the }}.
-        patternStr = patternStr.substring(from: patternStr.index(patternStr.startIndex, offsetBy: 2))
+        patternStr = String(patternStr[patternStr.index(patternStr.startIndex, offsetBy: 2)...])
         guard let end = self.findRegexVarEnd(patternStr, brackets: (open: "{", close: "}"), terminator: "}}") else {
           let loc = CheckLoc.inBuffer(pattern.baseAddress!, buf)
           diagnose(.error, at: loc, with: "found start of regex string with no end '}}'", options: options)
@@ -126,7 +126,7 @@ final class Pattern {
         regExPattern += "("
         curParen += 1
 
-        let substr = patternStr.substring(to: end)
+        let substr = patternStr[..<end]
         let (res, paren) = self.addRegExToRegEx(substr, curParen)
         curParen = paren
         if res {
@@ -134,7 +134,7 @@ final class Pattern {
         }
         regExPattern += ")"
 
-        patternStr = patternStr.substring(from: patternStr.index(end, offsetBy: 2))
+        patternStr = String(patternStr[patternStr.index(end, offsetBy: 2)...])
         continue
       }
 
@@ -146,23 +146,23 @@ final class Pattern {
       if patternStr.hasPrefix("[[") {
         // Find the closing bracket pair ending the match.  End is going to be an
         // offset relative to the beginning of the match string.
-        let regVar = patternStr.substring(from: patternStr.index(patternStr.startIndex, offsetBy: 2))
+        let regVar = String(patternStr[patternStr.index(patternStr.startIndex, offsetBy: 2)...])
         guard let end = self.findRegexVarEnd(regVar, brackets: (open: "[", close: "]"), terminator: "]]") else {
           let loc = CheckLoc.inBuffer(pattern.baseAddress!, buf)
           diagnose(.error, at: loc, with: "invalid named regex reference, no ]] found", options: options)
           return nil
         }
 
-        let matchStr = regVar.substring(to: end)
-        patternStr = patternStr.substring(from: patternStr.index(end, offsetBy: 4))
+        let matchStr = regVar[..<end]
+        patternStr = String(patternStr[patternStr.index(end, offsetBy: 4)...])
 
         // Get the regex name (e.g. "foo").
         let nameEnd = matchStr.range(of: ":")
         let name : String
         if let end = nameEnd?.lowerBound {
-          name = matchStr.substring(to: end)
+          name = String(matchStr[..<end])
         } else {
-          name = matchStr
+          name = String(matchStr)
         }
 
         if name.isEmpty {
@@ -218,7 +218,7 @@ final class Pattern {
         self.regExPattern += "("
         curParen += 1
 
-        let (res, paren) = self.addRegExToRegEx(matchStr.substring(from: matchStr.index(after: ne.lowerBound)), curParen)
+        let (res, paren) = self.addRegExToRegEx(matchStr[matchStr.index(after: ne.lowerBound)...], curParen)
         curParen = paren
         if res {
           return nil
@@ -230,8 +230,8 @@ final class Pattern {
       // Handle fixed string matches.
       // Find the end, which is the start of the next regex.
       if let fixedMatchEnd = mino(patternStr.range(of: "{{")?.lowerBound, patternStr.range(of: "[[")?.lowerBound) {
-        self.regExPattern += NSRegularExpression.escapedPattern(for: patternStr.substring(to: fixedMatchEnd))
-        patternStr = patternStr.substring(from: fixedMatchEnd)
+        self.regExPattern += NSRegularExpression.escapedPattern(for: String(patternStr[..<fixedMatchEnd]))
+        patternStr = String(patternStr[fixedMatchEnd...])
       } else {
         // No more matches, time to quit.
         self.regExPattern += NSRegularExpression.escapedPattern(for: patternStr)
@@ -260,13 +260,13 @@ final class Pattern {
     if !expr.hasPrefix("@LINE") {
       return nil
     }
-    expr = expr.substring(from: expr.index(expr.startIndex, offsetBy: "@LINE".utf8.count))
+    expr = String(expr[expr.index(expr.startIndex, offsetBy: "@LINE".utf8.count)...])
     guard let firstC = expr.characters.first else {
       return "\(self.lineNumber)"
     }
 
     if firstC == "+" {
-      expr = expr.substring(from: expr.index(after: expr.startIndex))
+      expr = String(expr[expr.index(after: expr.startIndex)...])
     } else if firstC != "-" {
       return nil
     }
@@ -350,19 +350,15 @@ final class Pattern {
     var mutTable = variableTable
     for (v, index) in self.variableDefs {
       assert(index < fullMatch.numberOfRanges, "Internal paren error")
-      #if os(macOS)
-        let r = fullMatch.rangeAt(index)
-      #else
-        let r = fullMatch.range(at: index)
-      #endif
-      mutTable[v] = buffer.substring(
-        with: Range<String.Index>(
+      let r = fullMatch.range(at: index)
+      mutTable[v] = String(buffer[
+        Range<String.Index>(
           uncheckedBounds: (
             buffer.index(buffer.startIndex, offsetBy: r.location),
             buffer.index(buffer.startIndex, offsetBy: NSMaxRange(r))
           )
         )
-      )
+      ])
     }
 
     return (fullMatch.range, mutTable)
@@ -386,7 +382,7 @@ final class Pattern {
       }
       if firstChar == "\\" {
         // Backslash escapes the next char within regexes, so skip them both.
-        string = string.substring(from: string.index(string.startIndex, offsetBy: 2))
+        string = String(string[string.index(string.startIndex, offsetBy: 2)...])
         offset = regVar.index(offset, offsetBy: 2)
       } else {
         switch firstChar {
@@ -405,7 +401,7 @@ final class Pattern {
         default:
           break
         }
-        string = string.substring(from: string.index(after: string.startIndex))
+        string = String(string[string.index(after: string.startIndex)...])
         offset = regVar.index(after: offset)
       }
     }
@@ -413,9 +409,9 @@ final class Pattern {
     return nil
   }
 
-  private func addRegExToRegEx(_ RS : String, _ cur : Int) -> (Bool, Int) {
+  private func addRegExToRegEx(_ RS : Substring, _ cur : Int) -> (Bool, Int) {
     do {
-      let r = try NSRegularExpression(pattern: RS, options: [])
+      let r = try NSRegularExpression(pattern: String(RS), options: [])
       self.regExPattern += RS
       return (false, cur + r.numberOfCaptureGroups)
     } catch let e {
@@ -435,7 +431,7 @@ func countNumNewlinesBetween(_ r : String) -> (Int, String.Index?) {
     guard let EOL = range.range(of: "\n")?.lowerBound ?? range.range(of: "\r")?.lowerBound else {
       return (NumNewLines, firstNewLine)
     }
-    range = range.substring(from: EOL)
+    range = String(range[EOL...])
     if range.isEmpty {
       return (NumNewLines, firstNewLine)
     }
@@ -446,7 +442,7 @@ func countNumNewlinesBetween(_ r : String) -> (Int, String.Index?) {
     //		if Range.utf8.count > 1 && (Range.utf8[1] == '\n' || Range[1] == '\r') && (Range[0] != Range[1]) {
     //			Range = Range.substr(1)
     //		}
-    range = range.substring(from: range.index(after: range.startIndex))
+    range = String(range[range.index(after: range.startIndex)...])
     
     if NumNewLines == 1 {
       firstNewLine = range.startIndex

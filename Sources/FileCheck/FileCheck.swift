@@ -283,14 +283,14 @@ private func findFirstMatch(in inbuffer : UnsafeBufferPointer<CChar>, among pref
       return ("", .none, lineNumber, buffer)
     }
     let skippedPrefix = substring(in: buffer, with: NSMakeRange(0, prefix.range.location))
-    let prefixStr = str.substring(
-      with: Range(
+    let prefixStr = String(str[
+      Range(
         uncheckedBounds: (
           str.index(str.startIndex, offsetBy: prefix.range.location),
           str.index(str.startIndex, offsetBy: NSMaxRange(prefix.range))
         )
       )
-    )
+    ])
 
     // HACK: Conversion between the buffer and `String` causes index
     // mismatches when searching for strings.  We're instead going to do
@@ -480,8 +480,8 @@ private func check(input b : String, against checkStrings : [CheckString], optio
       }
 
       variableTable = mutVariableTable
-      checkRegion = buffer.substring(to: buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range)))
-      buffer = buffer.substring(from: buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range)))
+      checkRegion = String(buffer[..<buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range))])
+      buffer = String(buffer[buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range))...])
       j += 1
     }
 
@@ -496,7 +496,7 @@ private func check(input b : String, against checkStrings : [CheckString], optio
         break
       }
       variableTable = mutVarTable
-      checkRegion = checkRegion.substring(from: checkRegion.index(checkRegion.startIndex, offsetBy: NSMaxRange(range)))
+      checkRegion = String(checkRegion[checkRegion.index(checkRegion.startIndex, offsetBy: NSMaxRange(range))...])
     }
     
     if j == checkStrings.count {

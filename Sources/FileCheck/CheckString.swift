@@ -78,7 +78,7 @@ struct CheckString {
     }
 
     // Match itself from the last position after matching CHECK-DAG.
-    let matchBuffer = buffer.substring(from: buffer.index(buffer.startIndex, offsetBy: lastPos))
+    let matchBuffer = String(buffer[buffer.index(buffer.startIndex, offsetBy: lastPos)...])
     guard let (range, mutVariableTable) = self.pattern.match(matchBuffer, initialTable) else {
       diagnoseFailedCheck(self.pattern, self.loc, self.prefix, variableTable, options, buffer)
       return nil
@@ -90,15 +90,15 @@ struct CheckString {
     let finalTable : [String:String]
     if !isLabelScanMode {
       let startIdx = buffer.index(buffer.startIndex, offsetBy: lastPos)
-      let skippedRegion = buffer.substring(
-        with: Range<String.Index>(
+      let skippedRegion = String(buffer[
+        Range<String.Index>(
           uncheckedBounds: (
             startIdx,
             buffer.index(startIdx, offsetBy: matchPos)
           )
         )
-      )
-      let rest = buffer.substring(from: buffer.index(buffer.startIndex, offsetBy: matchPos))
+      ])
+      let rest = String(buffer[buffer.index(buffer.startIndex, offsetBy: matchPos)...])
 
       // If this check is a "CHECK-NEXT", verify that the previous match was on
       // the previous line (i.e. that there is one newline between them).
@@ -247,7 +247,7 @@ struct CheckString {
       assert((pattern.type == .dag), "Expect CHECK-DAG!")
 
       // CHECK-DAG always matches from the start.
-      let matchBuffer = buffer.substring(from: buffer.index(buffer.startIndex, offsetBy: startPos))
+      let matchBuffer = String(buffer[buffer.index(buffer.startIndex, offsetBy: startPos)...])
       // With a group of CHECK-DAGs, a single mismatching means the match on
       // that group of CHECK-DAGs fails immediately.
       guard let (range, variableTable) = pattern.match(matchBuffer, finalTable) else {
@@ -277,14 +277,14 @@ struct CheckString {
         // If there's CHECK-NOTs between two CHECK-DAGs or from CHECK to
         // CHECK-DAG, verify that there's no 'not' strings occurred in that
         // region.
-        let skippedRegion = buffer.substring(
-          with: Range<String.Index>(
+        let skippedRegion = String(buffer[
+          Range<String.Index>(
             uncheckedBounds: (
               buffer.index(buffer.startIndex, offsetBy: lastPos),
               buffer.index(buffer.startIndex, offsetBy: matchPos)
             )
           )
-        )
+        ])
         let (cond, mutVarTable) = self.checkNot(skippedRegion, notStrings, finalTable, options)
         if cond {
           return nil
