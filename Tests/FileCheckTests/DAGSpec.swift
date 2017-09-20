@@ -143,4 +143,12 @@ class DAGSpec : XCTestCase {
       ].joined(separator: "\n"))
     })
   }
+
+  #if !os(macOS)
+  static var allTests = testCase([
+    ("testPrefixOrderInvariant", testPrefixOrderInvariant),
+    ("testDAGWithInst", testDAGWithInst),
+    ("testDAGXFailWithInst", testDAGXFailWithInst),
+  ])
+  #endif
 }

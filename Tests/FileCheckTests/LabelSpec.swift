@@ -82,4 +82,12 @@ class LabelSpec : XCTestCase {
       print(["bar", "foo", "foo", "zed"].joined(separator: "\n"))
     })
   }
+
+  #if !os(macOS)
+  static var allTests = testCase([
+    ("testLabels", testLabels),
+    ("testLabelFail", testLabelFail),
+    ("testLabelDAG", testLabelDAG),
+  ])
+  #endif
 }

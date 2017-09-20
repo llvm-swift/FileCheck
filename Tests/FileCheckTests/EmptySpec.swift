@@ -16,4 +16,11 @@ class EmptySpec : XCTestCase {
       XCTAssert(fileCheckOutput(options: [.allowEmptyInput]) {})
     })
   }
+
+  #if !os(macOS)
+  static var allTests = testCase([
+    ("testAllowEmpty", testAllowEmpty),
+    ("testEmptyError", testEmptyError),
+  ])
+  #endif
 }

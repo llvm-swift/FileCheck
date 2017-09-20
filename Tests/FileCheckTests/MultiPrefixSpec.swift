@@ -52,5 +52,41 @@ class MultiPrefixSpec : XCTestCase {
       })
     })
   }
+
+  func testMultiplePrefix2() {
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["BAZ", "BAZQUUX", "QUUXBAZ"], options: [.disableColors]) {
+      // BAZ
+      // BAZQUUX
+      // BAZQUUX: this is the {{match}}
+      // QUUXBAZ: this is {{another}}
+      print("""
+            this is the match
+            this is another
+            """)
+    })
+  }
+
+  func testMultiplePrefixOverlap() {
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["AAAOVERLAP", "OVERLAP"]) {
+      // OVERLAP: fo{{o}}
+      // AAAOVERLAP: ba{{r}}
+      // OVERLAP: buz{{z}}
+      print("""
+            foo
+            bar
+            buzz
+            """)
+    })
+  }
+
+  #if !os(macOS)
+  static var allTests = testCase([
+    ("testMultiplePrefixSubstr", testMultiplePrefixSubstr),
+    ("testMultiPrefixMixed", testMultiPrefixMixed),
+    ("testMultiplePrefixNoMatch", testMultiplePrefixNoMatch),
+    ("testMultiplePrefix2", testMultiplePrefix2),
+    ("testMultiplePrefixOverlap", testMultiplePrefixOverlap),
+  ])
+  #endif
 }
 

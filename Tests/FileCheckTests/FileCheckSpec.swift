@@ -140,13 +140,39 @@ class FileCheckSpec : XCTestCase {
     })
   }
 
+  func testNotDiagInfo() {
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["NOTDIAGINFO-TEXT"]) {
+      // NOTDIAGINFO-TEXT: error: NOTDIAGINFO-NOT: string occurred!
+      // NOTDIAGINFO-TEXT-NEXT: test
+      // NOTDIAGINFO-TEXT-NEXT: note: NOTDIAGINFO-NOT: pattern specified here
+      XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["NOTDIAGINFO"], options: .disableColors) {
+        // NOTDIAGINFO-NOT: test
+        print("test")
+      })
+    })
+  }
+
+  func testNonExistentPrefix() {
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-NONEXISTENT-PREFIX-ERR"]) {
+      // CHECK-NONEXISTENT-PREFIX-ERR: error: no check strings found with prefixes
+      // CHECK-NONEXISTENT-PREFIX-ERR-NEXT: CHECK-NONEXISTENT-PREFIX{{:}}
+      XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-NONEXISTENT-PREFIX"], options: [.disableColors]) {
+        // A-DIFFERENT-PREFIX: foobar
+        print("foobar")
+      })
+    })
+  }
+
   #if !os(macOS)
   static var allTests = testCase([
     ("testWhitespace", testWhitespace),
     ("testSame", testSame),
+    ("testCheckDAG", testCheckDAG),
     ("testImplicitCheckNot", testImplicitCheckNot),
     ("testUndefinedVariablePattern", testUndefinedVariablePattern),
     ("testNearestPattern", testNearestPattern),
+    ("testNotDiagInfo", testNotDiagInfo),
+    ("testNonExistentPrefix", testNonExistentPrefix),
   ])
   #endif
 }

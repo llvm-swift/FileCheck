@@ -162,7 +162,11 @@ final class Pattern {
         patternStr = String(patternStr[patternStr.index(end, offsetBy: 4)...])
 
         // Get the regex name (e.g. "foo").
+        #if os(macOS)
         let nameEnd = matchStr.range(of: ":")
+        #else
+        let nameEnd = String(matchStr).range(of: ":")
+        #endif
         let name : String
         if let end = nameEnd?.lowerBound {
           name = String(matchStr[..<end])
