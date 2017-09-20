@@ -12,10 +12,10 @@ enum CheckType {
 
   /// MatchEOF - When set, this pattern only matches the end of file. This is
   /// used for trailing CHECK-NOTs.
-  case EOF
+  case endOfFile
 
-  // Get the size of the prefix extension.
-  var size : Int {
+  // Get the count of utf8 bytes of the prefix extension.
+  var prefixSize : Int {
     switch (self) {
     case .none:
       return 0
@@ -33,8 +33,8 @@ enum CheckType {
       return "-DAG:".utf8.count
     case .label:
       return "-LABEL:".utf8.count
-    case .EOF:
-      fatalError("Should not be using EOF size")
+    case .endOfFile:
+      fatalError("Should not be using endOfFile prefix size")
     }
   }
 }
@@ -48,14 +48,14 @@ struct CheckString {
   let prefix : String
 
   /// The location in the match file that the check string was specified.
-  let loc : CheckLoc
+  let location : CheckLocation
 
   /// These are all of the strings that are disallowed from occurring between
   /// this match string and the previous one (or start of file).
-  var dagNotStrings : Array<Pattern>
+  let dagNotStrings : Array<Pattern>
 
   /// Match check string and its "not strings" and/or "dag strings".
-  func check(_ buffer : String, _ isLabelScanMode : Bool,  _ variableTable : [String:String], _ options: FileCheckOptions) -> (NSRange, [String:String])? {
+  func check(_ buffer : String, _ isLabelScanMode : Bool,  _ variableTable : [String:String], _ options : FileCheckOptions) -> (NSRange, [String:String])? {
     // This condition is true when we are scanning forward to find CHECK-LABEL
     // bounds we have not processed variable definitions within the bounded block
     // yet so cannot handle any final CHECK-DAG yet this is handled when going
@@ -80,7 +80,7 @@ struct CheckString {
     // Match itself from the last position after matching CHECK-DAG.
     let matchBuffer = String(buffer[buffer.index(buffer.startIndex, offsetBy: lastPos)...])
     guard let (range, mutVariableTable) = self.pattern.match(matchBuffer, initialTable) else {
-      diagnoseFailedCheck(self.pattern, self.loc, self.prefix, variableTable, options, buffer)
+      diagnoseFailedCheck(self.pattern, self.location, self.prefix, variableTable, options, buffer)
       return nil
     }
     let (matchPos, matchLen) = (range.location, range.length)
@@ -139,19 +139,18 @@ struct CheckString {
     //					 ->getBufferStart() &&
     //			 "CHECK-SAME can't be the first check in a file")
 
-    let (numNewLines, _ /*firstNewLine*/) = countNumNewlinesBetween(buffer)
-    if numNewLines != 0 {
+    if countNewlines(in: buffer).count != 0 {
       diagnose(.error,
-               at: self.loc,
+               at: self.location,
                with: self.prefix + "-SAME: is not on the same line as the previous match",
                options: options
       )
       rest.cString(using: .utf8)?.withUnsafeBufferPointer { buf in
-        let loc = CheckLoc.inBuffer(buf.baseAddress!, buf)
+        let loc = CheckLocation.inBuffer(buf.baseAddress!, buf)
         diagnose(.note, at: loc, with: "'next' match was here", options: options)
       }
       buffer.cString(using: .utf8)?.withUnsafeBufferPointer { buf in
-        let loc = CheckLoc.inBuffer(buf.baseAddress!, buf)
+        let loc = CheckLocation.inBuffer(buf.baseAddress!, buf)
         diagnose(.note, at: loc, with: "previous match ended here", options: options)
       }
       return true
@@ -172,31 +171,31 @@ struct CheckString {
     //										SMLoc::getFromPointer(Buffer.data())))
     //					 ->getBufferStart(), "CHECK-NEXT can't be the first check in a file")
 
-    let (numNewLines, firstNewLine) = countNumNewlinesBetween(buffer)
+    let (numNewLines, firstNewLine) = countNewlines(in: buffer)
     if numNewLines == 0 {
-      diagnose(.error, at: self.loc, with: prefix + "-NEXT: is on the same line as previous match", options: options)
+      diagnose(.error, at: self.location, with: prefix + "-NEXT: is on the same line as previous match", options: options)
       rest.cString(using: .utf8)?.withUnsafeBufferPointer { buf in
-        let loc = CheckLoc.inBuffer(buf.baseAddress!, buf)
+        let loc = CheckLocation.inBuffer(buf.baseAddress!, buf)
         diagnose(.note, at: loc, with: "'next' match was here", options: options)
       }
       buffer.cString(using: .utf8)?.withUnsafeBufferPointer { buf in
-        let loc = CheckLoc.inBuffer(buf.baseAddress!, buf)
+        let loc = CheckLocation.inBuffer(buf.baseAddress!, buf)
         diagnose(.note, at: loc, with: "previous match ended here", options: options)
       }
       return true
     }
 
     if numNewLines != 1 {
-      diagnose(.error, at: self.loc, with: prefix + "-NEXT: is not on the line after the previous match", options: options)
+      diagnose(.error, at: self.location, with: prefix + "-NEXT: is not on the line after the previous match", options: options)
       rest.cString(using: .utf8)?.withUnsafeBufferPointer { buf in
-        let loc = CheckLoc.inBuffer(buf.baseAddress!, buf)
+        let loc = CheckLocation.inBuffer(buf.baseAddress!, buf)
         diagnose(.note, at: loc, with: "'next' match was here", options: options)
       }
       buffer.cString(using: .utf8)?.withUnsafeBufferPointer { buf in
-        let loc = CheckLoc.inBuffer(buf.baseAddress!, buf)
+        let loc = CheckLocation.inBuffer(buf.baseAddress!, buf)
         diagnose(.note, at: loc, with: "previous match ended here", options: options)
         if let fnl = firstNewLine {
-          let noteLoc = CheckLoc.inBuffer(buf.baseAddress!.advanced(by: buffer.distance(from: buffer.startIndex, to: fnl)), buf)
+          let noteLoc = CheckLocation.inBuffer(buf.baseAddress!.advanced(by: buffer.distance(from: buffer.startIndex, to: fnl)), buf)
           diagnose(.note, at: noteLoc, with: "non-matching line after previous match is here", options: options)
         }
       }
@@ -215,7 +214,7 @@ struct CheckString {
         continue
       }
       buffer.cString(using: .utf8)?.withUnsafeBufferPointer { buf in
-        let loc = CheckLoc.inBuffer(buf.baseAddress!.advanced(by: range.location), buf)
+        let loc = CheckLocation.inBuffer(buf.baseAddress!.advanced(by: range.location), buf)
         diagnose(.error, at: loc, with: self.prefix + "-NOT: string occurred!", options: options)
       }
       diagnose(.note, at: pat.patternLoc, with: self.prefix + "-NOT: pattern specified here", options: options)
@@ -226,7 +225,7 @@ struct CheckString {
   }
 
   /// Match "dag strings" and their mixed "not strings".
-  func checkDAG(_ buffer : String, _ variableTable : [String:String], _ options: FileCheckOptions) -> (Int, [Pattern], [String:String])? {
+  private func checkDAG(_ buffer : String, _ variableTable : [String:String], _ options: FileCheckOptions) -> (Int, [Pattern], [String:String])? {
     var notStrings = [Pattern]()
     if self.dagNotStrings.isEmpty {
       return (0, notStrings, variableTable)
@@ -262,9 +261,9 @@ struct CheckString {
         if matchPos < lastPos {
           // Reordered?
           buffer.cString(using: .utf8)?.withUnsafeBufferPointer { buf in
-            let loc1 = CheckLoc.inBuffer(buf.baseAddress!.advanced(by: matchPos), buf)
+            let loc1 = CheckLocation.inBuffer(buf.baseAddress!.advanced(by: matchPos), buf)
             diagnose(.error, at: loc1, with: prefix + "-DAG: found a match of CHECK-DAG reordering across a CHECK-NOT", options: options)
-            let loc2 = CheckLoc.inBuffer(buf.baseAddress!.advanced(by: lastPos), buf)
+            let loc2 = CheckLocation.inBuffer(buf.baseAddress!.advanced(by: lastPos), buf)
             diagnose(.note, at: loc2, with: prefix + "-DAG: the farthest match of CHECK-DAG is found here", options: options)
           }
           diagnose(.note, at: notStrings[0].patternLoc, with: prefix + "-NOT: the crossed pattern specified here", options: options)
@@ -303,7 +302,7 @@ struct CheckString {
 }
 
 private func diagnoseFailedCheck(
-  _ pattern: Pattern, _ loc: CheckLoc, _ prefix: String,
+  _ pattern: Pattern, _ loc: CheckLocation, _ prefix: String,
   _ variableTable: [String : String], _ options: FileCheckOptions,
   _ buffer: String
 ) {
@@ -405,7 +404,7 @@ private func diagnoseFailedCheck(
 
   if let Best = BestLine, BestQuality < 50 {
     buffer.utf8CString.withUnsafeBufferPointer { buf in
-      let otherPatternLoc = CheckLoc.inBuffer(
+      let otherPatternLoc = CheckLocation.inBuffer(
         buf.baseAddress!.advanced(by: Best),
         UnsafeBufferPointer(start: buf.baseAddress?.advanced(by: Best), count: buf.count - Best)
       )

@@ -9,7 +9,7 @@
 import Foundation
 
 final class Pattern {
-  let patternLoc : CheckLoc
+  let patternLoc : CheckLocation
 
   let type : CheckType
 
@@ -39,7 +39,7 @@ final class Pattern {
     return !(variableUses.isEmpty && self.variableDefs.isEmpty)
   }
 
-  init(copying other: Pattern, at loc: CheckLoc) {
+  init(copying other: Pattern, at loc: CheckLocation) {
     self.patternLoc = loc
     self.type = other.type
     self.fixedString = other.fixedString
@@ -72,8 +72,13 @@ final class Pattern {
 
     self.type = ty
     self.lineNumber = lineNumber
-    var patternStr = substring(in: pattern, with: NSRange(location: 0, length: pattern.count))
-    self.patternLoc = CheckLoc.inBuffer(pattern.baseAddress!, buf)
+    var patternStr = String(
+      bytesNoCopy: UnsafeMutableRawPointer(mutating: pattern.baseAddress!),
+      length: pattern.count,
+      encoding: .utf8,
+      freeWhenDone: false
+    ) ?? ""
+    self.patternLoc = CheckLocation.inBuffer(pattern.baseAddress!, buf)
     self.options = options
 
     // Check that there is something on the line.
@@ -114,7 +119,7 @@ final class Pattern {
         // This is the start of a regex match.  Scan for the }}.
         patternStr = String(patternStr[patternStr.index(patternStr.startIndex, offsetBy: 2)...])
         guard let end = self.findRegexVarEnd(patternStr, brackets: (open: "{", close: "}"), terminator: "}}") else {
-          let loc = CheckLoc.inBuffer(pattern.baseAddress!, buf)
+          let loc = CheckLocation.inBuffer(pattern.baseAddress!, buf)
           diagnose(.error, at: loc, with: "found start of regex string with no end '}}'", options: options)
           return nil
         }
@@ -148,7 +153,7 @@ final class Pattern {
         // offset relative to the beginning of the match string.
         let regVar = String(patternStr[patternStr.index(patternStr.startIndex, offsetBy: 2)...])
         guard let end = self.findRegexVarEnd(regVar, brackets: (open: "[", close: "]"), terminator: "]]") else {
-          let loc = CheckLoc.inBuffer(pattern.baseAddress!, buf)
+          let loc = CheckLocation.inBuffer(pattern.baseAddress!, buf)
           diagnose(.error, at: loc, with: "invalid named regex reference, no ]] found", options: options)
           return nil
         }
@@ -166,7 +171,7 @@ final class Pattern {
         }
 
         if name.isEmpty {
-          let loc = CheckLoc.inBuffer(pattern.baseAddress!, buf)
+          let loc = CheckLocation.inBuffer(pattern.baseAddress!, buf)
           diagnose(.error, at: loc, with: "invalid name in named regex: empty name", options: options)
           return nil
         }
@@ -175,7 +180,7 @@ final class Pattern {
         // supports @LINE, @LINE+number, @LINE-number expressions. The check here
         // is relaxed, more strict check is performed in \c EvaluateExpression.
         var isExpression = false
-        let diagLoc = CheckLoc.inBuffer(pattern.baseAddress!, buf)
+        let diagLoc = CheckLocation.inBuffer(pattern.baseAddress!, buf)
         for (i, c) in name.characters.enumerated() {
           if i == 0 && c == "@" {
             if nameEnd != nil {
@@ -316,8 +321,8 @@ final class Pattern {
   /// The variable table provides the current values of filecheck variables and
   /// is updated if this match defines new values.
   func match(_ buffer : String, _ variableTable : [String:String]) -> (NSRange, [String:String])? {
-    // If this is the EOF pattern, match it immediately.
-    if self.type == .EOF {
+    // If this is the endOfFile pattern, match it immediately.
+    if self.type == .endOfFile {
       return (NSRange(location: buffer.utf8.count, length: 0), variableTable)
     }
 
@@ -339,7 +344,7 @@ final class Pattern {
     guard let r = try? NSRegularExpression(pattern: regExToMatch, options: [.anchorsMatchLines]) else {
       return nil
     }
-    let matchInfo = r.matches(in: buffer, options: [], range: NSRange(location: 0, length: buffer.utf8.count))
+    let matchInfo = r.matches(in: buffer, range: NSRange(location: 0, length: buffer.utf8.count))
 
     // Successful regex match.
     guard let fullMatch = matchInfo.first else {
@@ -411,7 +416,7 @@ final class Pattern {
 
   private func addRegExToRegEx(_ RS : Substring, _ cur : Int) -> (Bool, Int) {
     do {
-      let r = try NSRegularExpression(pattern: String(RS), options: [])
+      let r = try NSRegularExpression(pattern: String(RS))
       self.regExPattern += RS
       return (false, cur + r.numberOfCaptureGroups)
     } catch let e {
@@ -422,29 +427,33 @@ final class Pattern {
 }
 
 /// Count the number of newlines in the specified range.
-func countNumNewlinesBetween(_ r : String) -> (Int, String.Index?) {
-  var range = r
-  var NumNewLines = 0
+func countNewlines(in str : String) -> (count: Int, firstIndex: String.Index?) {
+  var range = Substring(str)
+  var newlineCount = 0
   var firstNewLine : String.Index? = nil
   while true {
     // Scan for newline.
-    guard let EOL = range.range(of: "\n")?.lowerBound ?? range.range(of: "\r")?.lowerBound else {
-      return (NumNewLines, firstNewLine)
-    }
-    range = String(range[EOL...])
-    if range.isEmpty {
-      return (NumNewLines, firstNewLine)
+
+    // If we can't find a newline, bail.
+    guard let EOL = range.index(of: "\n") ?? range.index(of: "\r") else {
+      return (newlineCount, firstNewLine)
     }
 
-    NumNewLines += 1
+    // Slice up to the newline.
+    range = range[EOL...]
+    if range.isEmpty {
+      return (newlineCount, firstNewLine)
+    }
+
+    newlineCount += 1
 
     // Handle \n\r and \r\n as a single newline.
     //		if Range.utf8.count > 1 && (Range.utf8[1] == '\n' || Range[1] == '\r') && (Range[0] != Range[1]) {
     //			Range = Range.substr(1)
     //		}
-    range = String(range[range.index(after: range.startIndex)...])
+    range = range[range.index(after: range.startIndex)...]
     
-    if NumNewLines == 1 {
+    if newlineCount == 1 {
       firstNewLine = range.startIndex
     }
   }

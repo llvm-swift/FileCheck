@@ -6,6 +6,8 @@ import Foundation
   import Darwin
 #endif
 
+/// `FileCheckOptions` enumerates supported FileCheck options that can be used
+/// to modify the behavior of the checking routine.
 public struct FileCheckOptions: OptionSet {
   public let rawValue: UInt64
 
@@ -97,7 +99,7 @@ public func fileCheckOutput(of FD : FileCheckFD = .stdout, withPrefixes prefixes
           "hyphens and underscores")
     return false
   }
-  guard let prefixRE = try? NSRegularExpression(pattern: validPrefixes.sorted(by: >).joined(separator: "|"), options: []) else {
+  guard let prefixRE = try? NSRegularExpression(pattern: validPrefixes.sorted(by: >).joined(separator: "|")) else {
     print("Unable to combine check-prefix strings into a prefix regular ",
           "expression! This is likely a bug in FileCheck's verification of ",
           "the check-prefix strings. Regular expression parsing failed.")
@@ -162,7 +164,7 @@ private func overrideFDAndCollectOutput(file : FileCheckFD, of block : () -> ())
 }
 
 private func validateCheckPrefixes(_ prefixes : [String]) -> [String]? {
-  let validator = try! NSRegularExpression(pattern: "^[a-zA-Z0-9_-]*$", options: [])
+  let validator = try! NSRegularExpression(pattern: "^[a-zA-Z0-9_-]*$")
 
   for prefix in prefixes {
     // Reject empty prefixes.
@@ -174,7 +176,7 @@ private func validateCheckPrefixes(_ prefixes : [String]) -> [String]? {
       location: 0,
       length: prefix.distance(from: prefix.startIndex, to: prefix.endIndex)
     )
-    if validator.matches(in: prefix, options: [], range: range).isEmpty {
+    if validator.matches(in: prefix, range: range).isEmpty {
       return nil
     }
   }
@@ -266,7 +268,31 @@ extension UnsafeBufferPointer {
   }
 }
 
-func substring(in buffer : UnsafeBufferPointer<CChar>, with range : NSRange) -> String {
+extension CheckLocation {
+  var message : String {
+    switch self {
+    case let .inBuffer(ptr, buf):
+      var startPtr = ptr
+      while startPtr != buf.baseAddress! && startPtr.predecessor().pointee != ("\n" as Character).utf8CodePoint {
+        startPtr = startPtr.predecessor()
+      }
+
+      var endPtr = ptr
+      while endPtr != buf.baseAddress!.advanced(by: buf.endIndex) && endPtr.successor().pointee != ("\n" as Character).utf8CodePoint {
+        endPtr = endPtr.successor()
+      }
+      // One more for good measure.
+      if endPtr != buf.baseAddress!.advanced(by: buf.endIndex) {
+        endPtr = endPtr.successor()
+      }
+      return substring(in: buf, with: NSMakeRange(buf.baseAddress!.distance(to: startPtr), startPtr.distance(to: endPtr)))
+    case let .string(s):
+      return s
+    }
+  }
+}
+
+private func substring(in buffer : UnsafeBufferPointer<CChar>, with range : NSRange) -> String {
   precondition(range.location + range.length <= buffer.count)
   let ptr = buffer.substr(range.location, range.length)
   return String(bytesNoCopy: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), length: range.length, encoding: .utf8, freeWhenDone: false) ?? ""
@@ -278,7 +304,7 @@ private func findFirstMatch(in inbuffer : UnsafeBufferPointer<CChar>, among pref
 
   while !buffer.isEmpty {
     let str = String(bytesNoCopy: UnsafeMutableRawPointer(mutating: buffer.baseAddress!), length: buffer.count, encoding: .utf8, freeWhenDone: false)!
-    let match = RE.firstMatch(in: str, options: [], range: NSRange(location: 0, length: str.distance(from: str.startIndex, to: str.endIndex)))
+    let match = RE.firstMatch(in: str, range: NSRange(location: 0, length: str.distance(from: str.startIndex, to: str.endIndex)))
     guard let prefix = match else {
       return ("", .none, lineNumber, buffer)
     }
@@ -343,7 +369,7 @@ private func readCheckStrings(in buf : UnsafeBufferPointer<CChar>, withPrefixes 
       let patBuf = UnsafeBufferPointer<CChar>(start: buf.baseAddress, count: buf.count - 1)
       let pat = Pattern(checking: .not, in: buf, pattern: patBuf, withPrefix: "IMPLICIT-CHECK", at: 0, options: options)!
       // Compute the message from this buffer now for diagnostics later.
-      let msg = CheckLoc.inBuffer(buf.baseAddress!, buf).message
+      let msg = CheckLocation.inBuffer(buf.baseAddress!, buf).message
       implicitNegativeChecks.append(Pattern(copying: pat, at: .string("IMPLICIT-CHECK-NOT: " + msg)))
     }
   }
@@ -360,11 +386,11 @@ private func readCheckStrings(in buf : UnsafeBufferPointer<CChar>, withPrefixes 
     lineNumber = ln
 
     // Skip the buffer to the end.
-    buffer = newBuffer.dropFront(usedPrefix.utf8.count + checkTy.size)
+    buffer = newBuffer.dropFront(usedPrefix.utf8.count + checkTy.prefixSize)
 
     // Complain about useful-looking but unsupported suffixes.
     if checkTy == .badNot {
-      let loc = CheckLoc.inBuffer(buffer.baseAddress!, buf)
+      let loc = CheckLocation.inBuffer(buffer.baseAddress!, buf)
       diagnose(.error, at: loc, with: "unsupported -NOT combo on prefix '\(usedPrefix)'", options: options)
       return []
     }
@@ -382,7 +408,7 @@ private func readCheckStrings(in buf : UnsafeBufferPointer<CChar>, withPrefixes 
     let EOL : Int = buffer.index(of: ("\n" as Character).utf8CodePoint) ?? buffer.index(of: ("\r" as Character).utf8CodePoint)!
 
     // Remember the location of the start of the pattern, for diagnostics.
-    let patternLoc = CheckLoc.inBuffer(buffer.baseAddress!, buf)
+    let patternLoc = CheckLocation.inBuffer(buffer.baseAddress!, buf)
 
     // Parse the pattern.
     let subBuffer = UnsafeBufferPointer<CChar>(start: buffer.baseAddress, count: EOL)
@@ -399,7 +425,7 @@ private func readCheckStrings(in buf : UnsafeBufferPointer<CChar>, withPrefixes 
     // Verify that CHECK-NEXT lines have at least one CHECK line before them.
     if (checkTy == .next || checkTy == .same) && contents.isEmpty {
       let type = (checkTy == .next) ? "NEXT" : "SAME"
-      let loc = CheckLoc.inBuffer(buffer.baseAddress!, buf)
+      let loc = CheckLocation.inBuffer(buffer.baseAddress!, buf)
       diagnose(.error, at: loc, with: "found '\(usedPrefix)-\(type)' without previous '\(usedPrefix): line", options: options)
       return []
     }
@@ -419,7 +445,7 @@ private func readCheckStrings(in buf : UnsafeBufferPointer<CChar>, withPrefixes 
     let cs = CheckString(
       pattern: pat,
       prefix: usedPrefix,
-      loc: .string(patternLoc.message),
+      location: .string(patternLoc.message),
       dagNotStrings: dagNotMatches
     )
     contents.append(cs)
@@ -430,9 +456,9 @@ private func readCheckStrings(in buf : UnsafeBufferPointer<CChar>, withPrefixes 
   // prefix as a filler for the error message.
   if !dagNotMatches.isEmpty {
     let cs = CheckString(
-      pattern: Pattern(withType: .EOF),
+      pattern: Pattern(withType: .endOfFile),
       prefix: prefixes.first!,
-      loc: dagNotMatches.last!.patternLoc,
+      location: dagNotMatches.last!.patternLoc,
       dagNotStrings: dagNotMatches
     )
     contents.append(cs)
@@ -454,7 +480,7 @@ private func readCheckStrings(in buf : UnsafeBufferPointer<CChar>, withPrefixes 
 ///
 /// Returns `false` if the input fails to satisfy the checks.
 private func check(input b : String, against checkStrings : [CheckString], options: FileCheckOptions) -> Bool {
-  var buffer = b
+  var buffer = Substring(b)
   var failedChecks = false
 
   // This holds all the current filecheck variables.
@@ -463,7 +489,7 @@ private func check(input b : String, against checkStrings : [CheckString], optio
   var i = 0
   var j = 0
   while true {
-    var checkRegion : String
+    var checkRegion : Substring
     if j == checkStrings.count {
       checkRegion = buffer
     } else {
@@ -474,14 +500,14 @@ private func check(input b : String, against checkStrings : [CheckString], optio
       }
 
       // Scan to next CHECK-LABEL match, ignoring CHECK-NOT and CHECK-DAG
-      guard let (range, mutVariableTable) = checkStr.check(buffer, true, variableTable, options) else {
+      guard let (range, mutVariableTable) = checkStr.check(String(buffer), true, variableTable, options) else {
         // Immediately bail if CHECK-LABEL fails, nothing else we can do.
         return false
       }
 
       variableTable = mutVariableTable
-      checkRegion = String(buffer[..<buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range))])
-      buffer = String(buffer[buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range))...])
+      checkRegion = buffer[..<buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range))]
+      buffer = buffer[buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range))...]
       j += 1
     }
 
@@ -490,13 +516,13 @@ private func check(input b : String, against checkStrings : [CheckString], optio
 
       // Check each string within the scanned region, including a second check
       // of any final CHECK-LABEL (to verify CHECK-NOT and CHECK-DAG)
-      guard let (range, mutVarTable) = checkStrings[i].check(checkRegion, false, variableTable, options) else {
+      guard let (range, mutVarTable) = checkStrings[i].check(String(checkRegion), false, variableTable, options) else {
         failedChecks = true
         i = j-1
         break
       }
       variableTable = mutVarTable
-      checkRegion = String(checkRegion[checkRegion.index(checkRegion.startIndex, offsetBy: NSMaxRange(range))...])
+      checkRegion = checkRegion[checkRegion.index(checkRegion.startIndex, offsetBy: NSMaxRange(range))...]
     }
     
     if j == checkStrings.count {
