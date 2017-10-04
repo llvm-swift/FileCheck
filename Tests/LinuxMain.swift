@@ -10,5 +10,6 @@ XCTMain([
   LabelSpec.allTests,
   LineCountSpec.allTests,
   MultiPrefixSpec.allTests,
+  VariableRefSpec.allTests,
 ])
 #endif
