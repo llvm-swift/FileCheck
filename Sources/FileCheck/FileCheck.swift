@@ -94,8 +94,8 @@ public enum FileCheckFD {
 /// - returns: Whether or not FileCheck succeeded in verifying the file.
 public func fileCheckOutput(of FD : FileCheckFD = .stdout, withPrefixes prefixes : [String] = ["CHECK"], checkNot : [String] = [], against file : String = #file, options: FileCheckOptions = [], block : () -> ()) -> Bool {
   guard let validPrefixes = validateCheckPrefixes(prefixes) else {
-    print("Supplied check-prefix is invalid! Prefixes must be unique and ",
-          "start with a letter and contain only alphanumeric characters, ",
+    print("Supplied check-prefix is invalid! Prefixes must be unique and",
+          "start with a letter and contain only alphanumeric characters,",
           "hyphens and underscores")
     return false
   }
@@ -166,11 +166,13 @@ private func overrideFDAndCollectOutput(file : FileCheckFD, of block : () -> ())
 private func validateCheckPrefixes(_ prefixes : [String]) -> [String]? {
   let validator = try! NSRegularExpression(pattern: "^[a-zA-Z0-9_-]*$")
 
+  var prefixUniquer = Set<String>()
   for prefix in prefixes {
     // Reject empty prefixes.
-    if prefix.isEmpty {
+    guard !prefix.isEmpty && !prefixUniquer.contains(prefix) else {
       return nil
     }
+    prefixUniquer.insert(prefix)
 
     let range = NSRange(
       location: 0,
@@ -181,7 +183,7 @@ private func validateCheckPrefixes(_ prefixes : [String]) -> [String]? {
     }
   }
 
-  return [String](Set<String>(prefixes))
+  return [String](prefixUniquer)
 }
 
 extension CChar {

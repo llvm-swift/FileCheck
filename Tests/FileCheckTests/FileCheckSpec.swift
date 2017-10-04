@@ -163,6 +163,30 @@ class FileCheckSpec : XCTestCase {
     })
   }
 
+  func testInvalidCheckPrefix() {
+    // BAD_PREFIX: Supplied check-prefix is invalid! Prefixes must be unique and start with a letter and contain only alphanumeric characters, hyphens and underscores
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["BAD_PREFIX"]) {
+      XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["A!"]) { })
+    })
+
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["A1a-B_c"]) {
+      // A1a-B_c: foobar
+      print("foobar")
+    })
+
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["BAD_PREFIX"]) {
+      XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["REPEAT", "REPEAT"]) { })
+    })
+
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["BAD_PREFIX"]) {
+      XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["VALID", "A!"]) { })
+    })
+
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["BAD_PREFIX"]) {
+      XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: [" "]) { })
+    })
+  }
+
   #if !os(macOS)
   static var allTests = testCase([
     ("testWhitespace", testWhitespace),
@@ -173,6 +197,7 @@ class FileCheckSpec : XCTestCase {
     ("testNearestPattern", testNearestPattern),
     ("testNotDiagInfo", testNotDiagInfo),
     ("testNonExistentPrefix", testNonExistentPrefix),
+    ("testInvalidCheckPrefix", testInvalidCheckPrefix),
   ])
   #endif
 }
