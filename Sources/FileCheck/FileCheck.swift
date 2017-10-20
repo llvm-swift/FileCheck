@@ -72,6 +72,25 @@ public enum FileCheckFD {
   }
 }
 
+/// `FileCheckSource` enumerates possible sources of Check Strings that act as
+/// the model against which output is checked.
+public enum FileCheckSource {
+  /// A path to a file that will be opened and parsed for check strings.  If the
+  /// file path is invalid, checking will abort.
+  case filePath(String)
+  /// A buffer of check strings.
+  case buffer(String)
+}
+
+/// - Bug: (SR-3258) Expansion of magic literals like #file does not behave
+/// correctly when in argument position.  Making it convertible from String
+/// does do the expansion for some reason.
+extension FileCheckSource: ExpressibleByStringLiteral {
+  public init(stringLiteral value: String) {
+    self = .filePath(value)
+  }
+}
+
 /// Reads from the given output stream and runs a file verification procedure
 /// by comparing the output to a specified result.
 ///
@@ -92,7 +111,7 @@ public enum FileCheckFD {
 ///   file descriptor.
 ///
 /// - returns: Whether or not FileCheck succeeded in verifying the file.
-public func fileCheckOutput(of FD : FileCheckFD = .stdout, withPrefixes prefixes : [String] = ["CHECK"], checkNot : [String] = [], against file : String = #file, options: FileCheckOptions = [], block : () -> ()) -> Bool {
+public func fileCheckOutput(of FD : FileCheckFD = .stdout, withPrefixes prefixes : [String] = ["CHECK"], checkNot : [String] = [], against source : FileCheckSource = #file, options: FileCheckOptions = [], block : () -> ()) -> Bool {
   guard let validPrefixes = validateCheckPrefixes(prefixes) else {
     print("Supplied check-prefix is invalid! Prefixes must be unique and",
           "start with a letter and contain only alphanumeric characters,",
@@ -109,16 +128,25 @@ public func fileCheckOutput(of FD : FileCheckFD = .stdout, withPrefixes prefixes
   let input = overrideFDAndCollectOutput(file: FD, of: block)
   if input.isEmpty {
     guard options.contains(.allowEmptyInput) else {
-      print("FileCheck error: input from file descriptor \(FD) is empty.\n")
+      print("FileCheck error: input from file descriptor \(FD) is empty.")
       return false
     }
     
     return true
   }
 
-  guard let contents = try? String(contentsOfFile: file, encoding: .utf8) else {
-    return false
+  let contents : String
+  switch source {
+  case .filePath(let file):
+    guard let openFile = try? String(contentsOfFile: file, encoding: .utf8) else {
+      print("FileCheck error: unable to open check file at path \(file).")
+      return false
+    }
+    contents = openFile
+  case .buffer(let buf):
+    contents = buf
   }
+
   let buf = contents.cString(using: .utf8)?.withUnsafeBufferPointer { buffer in
     return readCheckStrings(in: buffer, withPrefixes: validPrefixes, checkNot: checkNot, options: options, prefixRE)
   }
@@ -407,7 +435,9 @@ private func readCheckStrings(in buf : UnsafeBufferPointer<CChar>, withPrefixes 
     }
 
     // Scan ahead to the end of line.
-    let EOL : Int = buffer.index(of: ("\n" as Character).utf8CodePoint) ?? buffer.index(of: ("\r" as Character).utf8CodePoint)!
+    let EOL : Int = buffer.index(of: ("\n" as Character).utf8CodePoint)
+                  ?? buffer.index(of: ("\r" as Character).utf8CodePoint)
+                  ?? buffer.count - 1
 
     // Remember the location of the start of the pattern, for diagnostics.
     let patternLoc = CheckLocation.inBuffer(buffer.baseAddress!, buf)

@@ -3,6 +3,26 @@ import XCTest
 import Foundation
 
 class FileCheckSpec : XCTestCase {
+  func testCustomInputBuffer() {
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CUSTOMEMPTYBUF-ERR"]) {
+      // CUSTOMEMPTYBUF-ERR: error: no check strings found with prefixes
+      // CUSTOMEMPTYBUF-ERR-NEXT: CUSTOMEMPTYBUF:
+      XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["CUSTOMEMPTYBUF"], against: .buffer(""), options: [.disableColors]) {
+        print("asdf")
+      })
+    })
+
+    XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CUSTOMBUF"], against: .buffer("""
+    // CUSTOMBUF: shi shi shi shi shi
+    // CUSTOMBUF-NEXT: asdf
+    """)) {
+      print("""
+            shi shi shi shi shi
+            asdf
+            """)
+    })
+  }
+
   func testWhitespace() {
     // Check that CHECK-NEXT without a space after the colon works.
     // Check that CHECK-NOT without a space after the colon works.
@@ -129,7 +149,7 @@ class FileCheckSpec : XCTestCase {
 
   func testNearestPattern() {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-NEAREST-PATTERN-MSG"]) {
-      // CHECK-NEAREST-PATTERN-MSG: error: {{.*}}: could not find 'Once more into the beach' (with regex '') in input
+      // CHECK-NEAREST-PATTERN-MSG: error: {{.*}}: could not find 'Once more into the beach' in input
       // CHECK-NEAREST-PATTERN-MSG-NEXT: // {{.*}}: Once more into the beach
       // CHECK-NEAREST-PATTERN-MSG-NEXT: note: possible intended match here
       // CHECK-NEAREST-PATTERN-MSG-NEXT: Once more into the breach
@@ -189,6 +209,7 @@ class FileCheckSpec : XCTestCase {
 
   #if !os(macOS)
   static var allTests = testCase([
+    ("testCustomInputBuffer", testCustomInputBuffer),
     ("testWhitespace", testWhitespace),
     ("testSame", testSame),
     ("testCheckDAG", testCheckDAG),

@@ -307,10 +307,16 @@ private func diagnoseFailedCheck(
   _ buffer: String
 ) {
   if let rtm = pattern.computeRegexToMatch(variableTable) {
-    if !pattern.fixedString.isEmpty {
+    if !pattern.fixedString.isEmpty && !rtm.isEmpty {
       diagnose(.error,
                at: loc,
                with: prefix + ": could not find '\(pattern.fixedString)' (with regex '\(rtm)') in input",
+        options: options
+      )
+    } else if !pattern.fixedString.isEmpty {
+      diagnose(.error,
+               at: loc,
+               with: prefix + ": could not find '\(pattern.fixedString)' in input",
         options: options
       )
     } else {
