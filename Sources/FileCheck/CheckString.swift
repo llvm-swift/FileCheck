@@ -336,7 +336,7 @@ private func diagnoseFailedCheck(
 
   // Note any variables used by the pattern
   for (varName, _) in pattern.variableUses {
-    if varName.characters.first == "@" {
+    if varName.first == "@" {
       // If we failed with a builtin variable like @LINE, try to report
       // what it is bound to.
       if let value = pattern.evaluateExpression(varName) {
@@ -374,7 +374,7 @@ private func diagnoseFailedCheck(
   var BestLine : Int? = nil
   var BestQuality = 0.0
 
-  for i in 0..<min(buffer.characters.count, 4096) {
+  for i in 0..<min(buffer.count, 4096) {
     let exampleString : String
     if pattern.fixedString.isEmpty {
       exampleString = pattern.regExPattern
@@ -400,7 +400,7 @@ private func diagnoseFailedCheck(
     // Compute the "quality" of this match as an arbitrary combination of
     // the match distance and the number of lines skipped to get to this
     // match.
-    let distance = editDistance(from: Array(buffer.characters), to: Array(exampleString.characters))
+    let distance = editDistance(from: buffer.map{$0}, to: exampleString.map{$0})
     let quality = Double(distance) + (Double(NumLinesForward) / 100.0)
     if quality < BestQuality || BestLine == nil {
       BestLine = i

@@ -356,13 +356,13 @@ private func findFirstMatch(in inbuffer : UnsafeBufferPointer<CChar>, among pref
     let bd = Data(buffer: buffer)
     let range = bd.range(of: prefixStr.data(using: .utf8)!)!
     buffer = buffer.dropFront(range.lowerBound)
-    lineNumber += (skippedPrefix.characters.filter({ c in c == "\n" }) as [Character]).count
+    lineNumber += (skippedPrefix.filter({ c in c == "\n" }) as [Character]).count
     // Check that the matched prefix isn't a suffix of some other check-like
     // word.
     // FIXME: This is a very ad-hoc check. it would be better handled in some
     // other way. Among other things it seems hard to distinguish between
     // intentional and unintentional uses of this feature.
-    if skippedPrefix.isEmpty || !skippedPrefix.characters.last!.isPartOfWord {
+    if skippedPrefix.isEmpty || !skippedPrefix.last!.isPartOfWord {
       // Now extract the type.
       let checkTy = findCheckType(in: buffer, with: prefixStr)
 

@@ -185,7 +185,7 @@ final class Pattern {
         // is relaxed, more strict check is performed in \c EvaluateExpression.
         var isExpression = false
         let diagLoc = CheckLocation.inBuffer(pattern.baseAddress!, buf)
-        for (i, c) in name.characters.enumerated() {
+        for (i, c) in name.enumerated() {
           if i == 0 && c == "@" {
             if nameEnd != nil {
               diagnose(.error, at: diagLoc, with: "invalid name in named regex definition", options: options)
@@ -217,7 +217,7 @@ final class Pattern {
             }
             self.addBackrefToRegEx(varParenNum)
           } else {
-            variableUses.append((name, self.regExPattern.characters.count))
+            variableUses.append((name, self.regExPattern.count))
           }
           continue
         }
@@ -270,7 +270,7 @@ final class Pattern {
       return nil
     }
     expr = String(expr[expr.index(expr.startIndex, offsetBy: "@LINE".utf8.count)...])
-    guard let firstC = expr.characters.first else {
+    guard let firstC = expr.first else {
       return "\(self.lineNumber)"
     }
 
@@ -295,7 +295,7 @@ final class Pattern {
       for (v, offset) in self.variableUses {
         var value : String = ""
 
-        if let c = v.characters.first, c == "@" {
+        if let c = v.first, c == "@" {
           guard let v = self.evaluateExpression(v) else {
             return nil
           }
@@ -310,7 +310,7 @@ final class Pattern {
         }
 
         // Plop it into the regex at the adjusted offset.
-        regExToMatch.insert(contentsOf: value.characters, at: regExToMatch.index(regExToMatch.startIndex, offsetBy: offset + insertOffset))
+        regExToMatch.insert(contentsOf: value, at: regExToMatch.index(regExToMatch.startIndex, offsetBy: offset + insertOffset))
         insertOffset += value.utf8.count
       }
     }
@@ -385,7 +385,7 @@ final class Pattern {
     // [...] Nesting depth
     var bracketDepth = 0
 
-    while let firstChar = string.characters.first {
+    while let firstChar = string.first {
       if string.hasPrefix(terminator) && bracketDepth == 0 {
         return offset
       }
