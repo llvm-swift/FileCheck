@@ -374,19 +374,21 @@ private func diagnoseFailedCheck(
   var BestLine : Int? = nil
   var BestQuality = 0.0
 
+  let exampleString : Substring
+  if pattern.fixedString.isEmpty {
+    exampleString = Substring(pattern.regExPattern)
+  } else {
+    exampleString = Substring(pattern.fixedString)
+  }
+
+  // Bail with an empty check string.
+  guard !exampleString.isEmpty else {
+    return
+  }
+
   for i in 0..<min(buffer.count, 4096) {
-    let exampleString : String
-    if pattern.fixedString.isEmpty {
-      exampleString = pattern.regExPattern
-    } else {
-      exampleString = pattern.fixedString
-    }
-
-    if exampleString.isEmpty {
-      break
-    }
-
-    let char = buffer[buffer.index(buffer.startIndex, offsetBy: i)]
+    let strIndex = buffer.index(buffer.startIndex, offsetBy: i)
+    let char = buffer[strIndex]
     if char == "\n" {
       NumLinesForward += 1
     }
@@ -397,10 +399,18 @@ private func diagnoseFailedCheck(
       continue;
     }
 
+    let subEndIdx: String.Index
+    if buffer.count < exampleString.count + i {
+      subEndIdx = buffer.endIndex
+    } else {
+      subEndIdx = buffer.index(buffer.startIndex, offsetBy: exampleString.count + i)
+    }
+    let subBuffer = buffer[strIndex..<subEndIdx]
+
     // Compute the "quality" of this match as an arbitrary combination of
     // the match distance and the number of lines skipped to get to this
     // match.
-    let distance = editDistance(from: buffer.map{$0}, to: exampleString.map{$0})
+    let distance = editDistance(from: subBuffer, to: exampleString)
     let quality = Double(distance) + (Double(NumLinesForward) / 100.0)
     if quality < BestQuality || BestLine == nil {
       BestLine = i
