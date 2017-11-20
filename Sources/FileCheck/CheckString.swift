@@ -329,7 +329,7 @@ private func diagnoseFailedCheck(
   } else {
     diagnose(.error,
              at: loc,
-             with: prefix + ": could not find '\(pattern.fixedString)' in input",
+             with: prefix + ": could not find match for CHECK line",
       options: options
     )
   }
