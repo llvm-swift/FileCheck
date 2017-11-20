@@ -2,17 +2,11 @@
 ///
 /// - parameter fa: The first sequence to compare.
 /// - parameter ta: The second sequence to compare.
-/// - parameter allowReplacements: Whether to allow element replacements (change one
-///   element into another) as a single operation, rather than as two operations
-///   (an insertion and a removal).
-/// - parameter maxEditDistance: If non-zero, the maximum edit distance that this
-///   routine is allowed to compute. If the edit distance will exceed that
-///   maximum, returns \c MaxEditDistance+1.
 ///
-/// - returns: the minimum number of element insertions, removals, or (if
-///   `allowReplacements` is `true`) replacements needed to transform one of
-///   the given sequences into the other. If zero, the sequences are identical.
-func editDistance(from fa : Substring, to ta : Substring, allowReplacements : Bool = true, maxEditDistance : Int = 0) -> Int {
+/// - returns: the minimum number of element insertions, removals, or
+///   replacements needed to transform one of the given sequences into the
+///   other. If zero, the sequences are identical.
+func editDistance(from fa : Substring, to ta : Substring) -> Int {
   guard !fa.isEmpty else {
     return ta.count
   }
