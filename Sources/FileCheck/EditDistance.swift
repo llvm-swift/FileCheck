@@ -12,7 +12,15 @@
 /// - returns: the minimum number of element insertions, removals, or (if
 ///   `allowReplacements` is `true`) replacements needed to transform one of
 ///   the given sequences into the other. If zero, the sequences are identical.
-func editDistance<T: Equatable>(from fa : [T], to ta : [T], allowReplacements : Bool = true, maxEditDistance : Int = 0) -> Int {
+func editDistance(from fa : Substring, to ta : Substring, allowReplacements : Bool = true, maxEditDistance : Int = 0) -> Int {
+  guard !fa.isEmpty else {
+    return ta.count
+  }
+
+  guard !ta.isEmpty else {
+    return fa.count
+  }
+
   // The algorithm implemented below is the "classic"
   // dynamic-programming algorithm for computing the Levenshtein
   // distance, which is described here:
@@ -25,38 +33,21 @@ func editDistance<T: Equatable>(from fa : [T], to ta : [T], allowReplacements : 
   // only the entries to the left, top, and top-left are needed.  The left
   // entry is in `row[x-1]`, the top entry is what's in `row[x]` from the last
   // iteration, and the top-left entry is stored in Previous.
-  let m = fa.count
-  let n = ta.count
+  var pre = [Int](0..<(ta.count + 1))
+  var cur = [Int](repeating: 0, count: ta.count + 1)
 
-  var row = [Int](1...(n+1))
-
-  for y in 1...m {
-    row[0] = y
-    var bestThisRow = row[0]
-
-    var previous = y - 1
-    for x in 1...n {
-      let oldRow = row[x]
-      if allowReplacements {
-        row[x] = min(
-          previous + (fa[y - 1] == ta[x - 1] ? 0 : 1),
-          min(row[x - 1], row[x]) + 1
-        )
-      } else {
-        if fa[y-1] == ta[x-1] {
-          row[x] = previous
-        } else {
-          row[x] = min(row[x-1], row[x]) + 1
-        }
-      }
-      previous = oldRow
-      bestThisRow = min(bestThisRow, row[x])
+  for (i, ca) in fa.enumerated() {
+    cur[0] = i + 1;
+    for (j, cb) in ta.enumerated() {
+      cur[j + 1] = min(
+        // deletion
+        pre[j + 1] + 1, min(
+          // insertion
+          cur[j] + 1,
+          // match or substitution
+          pre[j] + (ca == cb ? 0 : 1)))
     }
-
-    if maxEditDistance != 0 && bestThisRow > maxEditDistance {
-      return maxEditDistance + 1
-    }
+    swap(&cur, &pre)
   }
-
-  return row[n]
+  return pre[ta.count]
 }
