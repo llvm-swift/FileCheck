@@ -9,7 +9,13 @@ let package = Package(
       name: "FileCheck",
       targets: ["FileCheck"]),
   ],
+  dependencies: [
+    .package(url: "https://github.com/silt-lang/CommandLine.git", from: "4.0.0")
+  ],
   targets: [
+    .target(
+      name: "file-check",
+      dependencies: ["FileCheck", "CommandLine"]),
     .target(
       name: "FileCheck"),
     .testTarget(
