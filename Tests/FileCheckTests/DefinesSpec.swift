@@ -3,7 +3,7 @@ import XCTest
 import Foundation
 
 class DefinesSpec : XCTestCase {
-  func testEnvironmentVariables() {
+  func testGlobalDefines() {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["PASSDEF"], withGlobals: ["VALUE":"10"]) {
       // PASSDEF: Value = [[VALUE]]
       print("Value = 10")
@@ -19,5 +19,11 @@ class DefinesSpec : XCTestCase {
       })
     })
   }
+
+  #if !os(macOS)
+  static var allTests = testCase([
+    ("testGlobalDefines", testGlobalDefines),
+  ])
+  #endif
 }
 

@@ -186,13 +186,20 @@ final class Pattern {
         var isExpression = false
         let diagLoc = CheckLocation.inBuffer(pattern.baseAddress!, buf)
         for (i, c) in name.enumerated() {
-          if i == 0 && c == "@" {
-            if nameEnd != nil {
-              diagnose(.error, at: diagLoc, with: "invalid name in named regex definition", options: options)
-              return nil
+          if i == 0 {
+            // Global vars start with '$'
+            if c == "$" {
+              continue
             }
-            isExpression = true
-            continue
+
+            if c == "@" {
+              if nameEnd != nil {
+                diagnose(.error, at: diagLoc, with: "invalid name in named regex definition", options: options)
+                return nil
+              }
+              isExpression = true
+              continue
+            }
           }
           if c != "_" && isalnum(Int32(c.utf8CodePoint)) == 0 && (!isExpression || (c != "+" && c != "-")) {
             diagnose(.error, at: diagLoc, with: "invalid name in named regex", options: options)

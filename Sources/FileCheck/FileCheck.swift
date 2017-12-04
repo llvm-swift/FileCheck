@@ -27,6 +27,10 @@ public struct FileCheckOptions: OptionSet {
   public static let matchFullLines = FileCheckOptions(rawValue: 1 << 2)
   /// Disable colored diagnostics.
   public static let disableColors = FileCheckOptions(rawValue: 1 << 3)
+  /// Enables scoping for variables defined in patterns.  Variables with names
+  /// that do not start with `$` will be reset at the beginning of each
+  /// `CHECK-LABEL` block.
+  public static let scopedVariables = FileCheckOptions(rawValue: 1 << 4)
 }
 
 /// `FileCheckFD` represents the standard output streams `FileCheck` is capable
@@ -556,6 +560,20 @@ private func check(
       checkRegion = buffer[..<buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range))]
       buffer = buffer[buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range))...]
       j += 1
+    }
+
+    // Remove local variables from the variable table. Global variables
+    // (start with `$`) are preserved.
+    if options.contains(.scopedVariables) {
+      var localVariables = [String]()
+      localVariables.reserveCapacity(16)
+      for (k, v) in variableTable where !k.hasPrefix("$") {
+        localVariables.append(k)
+      }
+
+      for k in localVariables {
+        variableTable.removeValue(forKey: k)
+      }
     }
 
     while i != j {
