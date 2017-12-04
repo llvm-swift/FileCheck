@@ -101,6 +101,8 @@ extension FileCheckSource: ExpressibleByStringLiteral {
 /// - parameter FD: The file descriptor to override and read from.
 /// - parameter prefixes: Specifies one or more prefixes to match. By default
 ///   these patterns are prefixed with "CHECK".
+/// - parameter globals: Specifies a dictionary of global variables whose
+///   names may be used in capture patterns.
 /// - parameter checkNot: Specifies zero or more prefixes to implicitly reject
 ///   in the output stream.  This can be used to implement LLVM-verifier-like
 ///   checks.
@@ -111,7 +113,15 @@ extension FileCheckSource: ExpressibleByStringLiteral {
 ///   file descriptor.
 ///
 /// - returns: Whether or not FileCheck succeeded in verifying the file.
-public func fileCheckOutput(of FD : FileCheckFD = .stdout, withPrefixes prefixes : [String] = ["CHECK"], checkNot : [String] = [], against source : FileCheckSource = #file, options: FileCheckOptions = [], block : () -> ()) -> Bool {
+public func fileCheckOutput(
+  of FD : FileCheckFD = .stdout,
+  withPrefixes prefixes : [String] = ["CHECK"],
+  withGlobals globals: [String:String] = [:],
+  checkNot : [String] = [],
+  against source : FileCheckSource = #file,
+  options: FileCheckOptions = [],
+  block : () -> ()
+) -> Bool {
   guard let validPrefixes = validateCheckPrefixes(prefixes) else {
     print("Supplied check-prefix is invalid! Prefixes must be unique and",
           "start with a letter and contain only alphanumeric characters,",
@@ -154,7 +164,7 @@ public func fileCheckOutput(of FD : FileCheckFD = .stdout, withPrefixes prefixes
     return false
   }
 
-  return check(input: input, against: checkStrings, options: options)
+  return check(input: input, against: checkStrings, withGlobals: globals, options: options)
 }
 
 private func overrideFDAndCollectOutput(file : FileCheckFD, of block : () -> ()) -> String {
@@ -511,12 +521,17 @@ private func readCheckStrings(in buf : UnsafeBufferPointer<CChar>, withPrefixes 
 /// strings read from the check file.
 ///
 /// Returns `false` if the input fails to satisfy the checks.
-private func check(input b : String, against checkStrings : [CheckString], options: FileCheckOptions) -> Bool {
+private func check(
+  input b : String,
+  against checkStrings : [CheckString],
+  withGlobals globals: [String:String],
+  options: FileCheckOptions
+) -> Bool {
   var buffer = Substring(b)
   var failedChecks = false
 
   // This holds all the current filecheck variables.
-  var variableTable = [String:String]()
+  var variableTable = globals
 
   var i = 0
   var j = 0
