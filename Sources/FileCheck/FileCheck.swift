@@ -27,6 +27,10 @@ public struct FileCheckOptions: OptionSet {
   public static let matchFullLines = FileCheckOptions(rawValue: 1 << 2)
   /// Disable colored diagnostics.
   public static let disableColors = FileCheckOptions(rawValue: 1 << 3)
+  /// Enables scoping for variables defined in patterns.  Variables with names
+  /// that do not start with `$` will be reset at the beginning of each
+  /// `CHECK-LABEL` block.
+  public static let scopedVariables = FileCheckOptions(rawValue: 1 << 4)
 }
 
 /// `FileCheckFD` represents the standard output streams `FileCheck` is capable
@@ -101,6 +105,8 @@ extension FileCheckSource: ExpressibleByStringLiteral {
 /// - parameter FD: The file descriptor to override and read from.
 /// - parameter prefixes: Specifies one or more prefixes to match. By default
 ///   these patterns are prefixed with "CHECK".
+/// - parameter globals: Specifies a dictionary of global variables whose
+///   names may be used in capture patterns.
 /// - parameter checkNot: Specifies zero or more prefixes to implicitly reject
 ///   in the output stream.  This can be used to implement LLVM-verifier-like
 ///   checks.
@@ -111,7 +117,15 @@ extension FileCheckSource: ExpressibleByStringLiteral {
 ///   file descriptor.
 ///
 /// - returns: Whether or not FileCheck succeeded in verifying the file.
-public func fileCheckOutput(of FD : FileCheckFD = .stdout, withPrefixes prefixes : [String] = ["CHECK"], checkNot : [String] = [], against source : FileCheckSource = #file, options: FileCheckOptions = [], block : () -> ()) -> Bool {
+public func fileCheckOutput(
+  of FD : FileCheckFD = .stdout,
+  withPrefixes prefixes : [String] = ["CHECK"],
+  withGlobals globals: [String:String] = [:],
+  checkNot : [String] = [],
+  against source : FileCheckSource = #file,
+  options: FileCheckOptions = [],
+  block : () -> ()
+) -> Bool {
   guard let validPrefixes = validateCheckPrefixes(prefixes) else {
     print("Supplied check-prefix is invalid! Prefixes must be unique and",
           "start with a letter and contain only alphanumeric characters,",
@@ -154,7 +168,7 @@ public func fileCheckOutput(of FD : FileCheckFD = .stdout, withPrefixes prefixes
     return false
   }
 
-  return check(input: input, against: checkStrings, options: options)
+  return check(input: input, against: checkStrings, withGlobals: globals, options: options)
 }
 
 private func overrideFDAndCollectOutput(file : FileCheckFD, of block : () -> ()) -> String {
@@ -511,12 +525,17 @@ private func readCheckStrings(in buf : UnsafeBufferPointer<CChar>, withPrefixes 
 /// strings read from the check file.
 ///
 /// Returns `false` if the input fails to satisfy the checks.
-private func check(input b : String, against checkStrings : [CheckString], options: FileCheckOptions) -> Bool {
+private func check(
+  input b : String,
+  against checkStrings : [CheckString],
+  withGlobals globals: [String:String],
+  options: FileCheckOptions
+) -> Bool {
   var buffer = Substring(b)
   var failedChecks = false
 
   // This holds all the current filecheck variables.
-  var variableTable = [String:String]()
+  var variableTable = globals
 
   var i = 0
   var j = 0
@@ -541,6 +560,20 @@ private func check(input b : String, against checkStrings : [CheckString], optio
       checkRegion = buffer[..<buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range))]
       buffer = buffer[buffer.index(buffer.startIndex, offsetBy: NSMaxRange(range))...]
       j += 1
+    }
+
+    // Remove local variables from the variable table. Global variables
+    // (start with `$`) are preserved.
+    if options.contains(.scopedVariables) {
+      var localVariables = [String]()
+      localVariables.reserveCapacity(16)
+      for (k, v) in variableTable where !k.hasPrefix("$") {
+        localVariables.append(k)
+      }
+
+      for k in localVariables {
+        variableTable.removeValue(forKey: k)
+      }
     }
 
     while i != j {

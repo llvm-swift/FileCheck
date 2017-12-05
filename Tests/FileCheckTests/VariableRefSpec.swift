@@ -14,6 +14,7 @@ class VariableRefSpec : XCTestCase {
       print("op4 g1, g2, g1")
     })
   }
+  
   #if !os(macOS)
   static var allTests = testCase([
     ("testSameLineVarRef", testSameLineVarRef),
