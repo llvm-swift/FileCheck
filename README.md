@@ -1,5 +1,5 @@
 # FileCheck
-[![Build Status](https://travis-ci.org/trill-lang/FileCheck.svg?branch=master)](https://travis-ci.org/trill-lang/FileCheck)
+[![Build Status](https://travis-ci.org/llvm-swift/FileCheck.svg?branch=master)](https://travis-ci.org/llvm-swift/FileCheck)
 
 A standalone Swift version of LLVM's flexible pattern matching file verifier
 
@@ -54,7 +54,7 @@ comments.
 - Add FileCheck to your `Package.swift` file's dependencies section:
 
 ```swift
-.Package(url: "https://github.com/trill-lang/FileCheck.git", versions: Version(0,0,1)..<Version(1,0,0))
+.Package(url: "https://github.com/llvm-swift/FileCheck.git", versions: Version(0,0,1)..<Version(1,0,0))
 ```
 
 ## Authors
