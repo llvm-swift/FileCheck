@@ -355,7 +355,8 @@ final class Pattern {
     guard let r = try? NSRegularExpression(pattern: regExToMatch, options: [.anchorsMatchLines]) else {
       return nil
     }
-    let matchInfo = r.matches(in: buffer, range: NSRange(location: 0, length: buffer.utf8.count))
+    let distance = buffer.distance(from: buffer.startIndex, to: buffer.endIndex)
+    let matchInfo = r.matches(in: buffer, range: NSRange(location: 0, length: distance))
 
     // Successful regex match.
     guard let fullMatch = matchInfo.first else {
