@@ -6,13 +6,16 @@
 /// - returns: the minimum number of element insertions, removals, or
 ///   replacements needed to transform one of the given sequences into the
 ///   other. If zero, the sequences are identical.
-func editDistance(from fa : Substring, to ta : Substring) -> Int {
-  guard !fa.isEmpty else {
-    return ta.count
+func editDistance(
+  from fa : UnsafePointer<CChar>, fromLength: Int,
+  to ta : UnsafePointer<CChar>, toLength: Int
+) -> Int {
+  guard fromLength != 0 else {
+    return toLength
   }
 
-  guard !ta.isEmpty else {
-    return fa.count
+  guard toLength != 0 else {
+    return fromLength
   }
 
   // The algorithm implemented below is the "classic"
@@ -27,12 +30,14 @@ func editDistance(from fa : Substring, to ta : Substring) -> Int {
   // only the entries to the left, top, and top-left are needed.  The left
   // entry is in `row[x-1]`, the top entry is what's in `row[x]` from the last
   // iteration, and the top-left entry is stored in Previous.
-  var pre = [Int](0..<(ta.count + 1))
-  var cur = [Int](repeating: 0, count: ta.count + 1)
+  var pre = [Int](0..<(toLength + 1))
+  var cur = [Int](repeating: 0, count: toLength + 1)
 
-  for (i, ca) in fa.enumerated() {
+  for i in 0..<fromLength {
+    let ca = fa[i]
     cur[0] = i + 1;
-    for (j, cb) in ta.enumerated() {
+    for j in 0..<toLength {
+      let cb = ta[j]
       cur[j + 1] = min(
         // deletion
         pre[j + 1] + 1, min(
@@ -43,5 +48,5 @@ func editDistance(from fa : Substring, to ta : Substring) -> Int {
     }
     swap(&cur, &pre)
   }
-  return pre[ta.count]
+  return pre[toLength]
 }

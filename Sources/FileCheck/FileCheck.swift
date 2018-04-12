@@ -161,14 +161,19 @@ public func fileCheckOutput(
     contents = buf
   }
 
-  let buf = contents.cString(using: .utf8)?.withUnsafeBufferPointer { buffer in
-    return readCheckStrings(in: buffer, withPrefixes: validPrefixes, checkNot: checkNot, options: options, prefixRE)
-  }
-  guard let checkStrings = buf, !checkStrings.isEmpty else {
+  guard let cstr = contents.cString(using: .utf8) else {
     return false
   }
 
-  return check(input: input, against: checkStrings, withGlobals: globals, options: options)
+  return cstr.withUnsafeBufferPointer { buffer in
+    let checkStrings = readCheckStrings(in: buffer, withPrefixes: validPrefixes,
+                                        checkNot: checkNot, options: options, prefixRE)
+    guard !checkStrings.isEmpty else {
+      return false
+    }
+
+    return check(input: input, against: checkStrings, withGlobals: globals, options: options)
+  }
 }
 
 private func overrideFDAndCollectOutput(file : FileCheckFD, of block : () -> ()) -> String {
@@ -322,11 +327,7 @@ extension CheckLocation {
       }
 
       var endPtr = ptr
-      while endPtr != buf.baseAddress!.advanced(by: buf.endIndex) && endPtr.successor().pointee != ("\n" as Character).utf8CodePoint {
-        endPtr = endPtr.successor()
-      }
-      // One more for good measure.
-      if endPtr != buf.baseAddress!.advanced(by: buf.endIndex) {
+      while buf.baseAddress!.advanced(by: buf.endIndex) - endPtr > 1 && endPtr.pointee != ("\n" as Character).utf8CodePoint {
         endPtr = endPtr.successor()
       }
       return substring(in: buf, with: NSMakeRange(buf.baseAddress!.distance(to: startPtr), startPtr.distance(to: endPtr)))
@@ -409,12 +410,11 @@ private func readCheckStrings(in buf : UnsafeBufferPointer<CChar>, withPrefixes 
       continue
     }
 
-    notPattern.utf8CString.withUnsafeBufferPointer { buf in
-      let patBuf = UnsafeBufferPointer<CChar>(start: buf.baseAddress, count: buf.count - 1)
-      let pat = Pattern(checking: .not, in: buf, pattern: patBuf, withPrefix: "IMPLICIT-CHECK", at: 0, options: options)!
+    notPattern.utf8CString.withUnsafeBufferPointer { notBuf in
+      let patBuf = UnsafeBufferPointer<CChar>(start: notBuf.baseAddress, count: notBuf.count - 1)
+      let pat = Pattern(checking: .not, in: notBuf, pattern: patBuf, withPrefix: "IMPLICIT-CHECK", at: 0, options: options)!
       // Compute the message from this buffer now for diagnostics later.
-      let msg = CheckLocation.inBuffer(buf.baseAddress!, buf).message
-      implicitNegativeChecks.append(Pattern(copying: pat, at: .string("IMPLICIT-CHECK-NOT: " + msg)))
+      implicitNegativeChecks.append(Pattern(copying: pat, at: .string("IMPLICIT-CHECK-NOT: " + pat.fixedString)))
     }
   }
   var dagNotMatches = implicitNegativeChecks

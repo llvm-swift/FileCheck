@@ -386,45 +386,52 @@ private func diagnoseFailedCheck(
     return
   }
 
-  for i in 0..<min(buffer.count, 4096) {
-    let strIndex = buffer.index(buffer.startIndex, offsetBy: i)
-    let char = buffer[strIndex]
-    if char == "\n" {
-      NumLinesForward += 1
+  let exampleStringLen = exampleString.count
+  exampleString.withCString { (exampleBuf) -> Void in
+    for i in 0..<min(buffer.count, 4096) {
+      let strIndex = buffer.index(buffer.startIndex, offsetBy: i)
+      let char = buffer[strIndex]
+      if char == "\n" {
+        NumLinesForward += 1
+      }
+
+      // Patterns have leading whitespace stripped, so skip whitespace when
+      // looking for something which looks like a pattern.
+      if char == " " || char == "\t" {
+        continue;
+      }
+
+      let subEndIdx: String.Index
+      if buffer.count < exampleString.count + i {
+        subEndIdx = buffer.endIndex
+      } else {
+        subEndIdx = buffer.index(buffer.startIndex, offsetBy: exampleString.count + i)
+      }
+      let subBuffer = buffer[strIndex..<subEndIdx]
+
+      // Compute the "quality" of this match as an arbitrary combination of
+      // the match distance and the number of lines skipped to get to this
+      // match.
+      let bodyBufLen = subBuffer.count
+      let distance = subBuffer.withCString { (bodyBuf) -> Int in
+        return editDistance(from: bodyBuf, fromLength: bodyBufLen,
+                            to: exampleBuf, toLength: exampleStringLen)
+      }
+      let quality = Double(distance) + (Double(NumLinesForward) / 100.0)
+      if quality < BestQuality || BestLine == nil {
+        BestLine = i
+        BestQuality = quality
+      }
     }
 
-    // Patterns have leading whitespace stripped, so skip whitespace when
-    // looking for something which looks like a pattern.
-    if char == " " || char == "\t" {
-      continue;
-    }
-
-    let subEndIdx: String.Index
-    if buffer.count < exampleString.count + i {
-      subEndIdx = buffer.endIndex
-    } else {
-      subEndIdx = buffer.index(buffer.startIndex, offsetBy: exampleString.count + i)
-    }
-    let subBuffer = buffer[strIndex..<subEndIdx]
-
-    // Compute the "quality" of this match as an arbitrary combination of
-    // the match distance and the number of lines skipped to get to this
-    // match.
-    let distance = editDistance(from: subBuffer, to: exampleString)
-    let quality = Double(distance) + (Double(NumLinesForward) / 100.0)
-    if quality < BestQuality || BestLine == nil {
-      BestLine = i
-      BestQuality = quality
-    }
-  }
-
-  if let Best = BestLine, BestQuality < 50 {
-    buffer.utf8CString.withUnsafeBufferPointer { buf in
-      let otherPatternLoc = CheckLocation.inBuffer(
-        buf.baseAddress!.advanced(by: Best),
-        UnsafeBufferPointer(start: buf.baseAddress?.advanced(by: Best), count: buf.count - Best)
-      )
-      diagnose(.note, at: otherPatternLoc, with: "possible intended match here", options: options)
+    if let Best = BestLine, BestQuality < 50 {
+      buffer.utf8CString.withUnsafeBufferPointer { buf in
+        let otherPatternLoc = CheckLocation.inBuffer(
+          buf.baseAddress!.advanced(by: Best),
+          UnsafeBufferPointer(start: buf.baseAddress?.advanced(by: Best), count: buf.count - Best)
+        )
+        diagnose(.note, at: otherPatternLoc, with: "possible intended match here", options: options)
+      }
     }
   }
 }
