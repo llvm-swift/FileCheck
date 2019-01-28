@@ -151,7 +151,9 @@ class FileCheckSpec : XCTestCase {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-NEAREST-PATTERN-MSG"]) {
       // CHECK-NEAREST-PATTERN-MSG: error: {{.*}}: could not find 'Once more into the beach' in input
       // CHECK-NEAREST-PATTERN-MSG-NEXT: // {{.*}}: Once more into the beach
-      // CHECK-NEAREST-PATTERN-MSG-NEXT: note: possible intended match here
+      // CHECK-NEAREST-PATTERN-MSG-NEXT: note: scanning from here
+      // CHECK-NEAREST-PATTERN-MSG-NEXT: Once more into the breach
+      // CHECK-NEAREST-PATTERN-MSG: note: possible intended match here
       // CHECK-NEAREST-PATTERN-MSG-NEXT: Once more into the breach
       XCTAssertFalse(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-NEAREST-PATTERN"], options: [.disableColors]) {
         // CHECK-NEAREST-PATTERN: Once more into the beach
