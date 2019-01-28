@@ -301,6 +301,9 @@ struct CheckString {
   }
 }
 
+private let whitespaceCharacterSet: Set<Character> = [" ", "\t", "\n", "\r"]
+
+
 private func diagnoseFailedCheck(
   _ pattern: Pattern, _ loc: CheckLocation, _ prefix: String,
   _ variableTable: [String : String], _ options: FileCheckOptions,
@@ -333,6 +336,12 @@ private func diagnoseFailedCheck(
       options: options
     )
   }
+
+  let bufferPrefix = buffer.firstIndex { !whitespaceCharacterSet.contains($0) } ?? buffer.startIndex
+  diagnose(.note,
+           at: .string(String(buffer[bufferPrefix...])),
+           with: "scanning from here",
+           options: options)
 
   // Note any variables used by the pattern
   for (varName, _) in pattern.variableUses {
