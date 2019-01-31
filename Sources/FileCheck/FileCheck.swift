@@ -442,15 +442,15 @@ private func readCheckStrings(in buf : UnsafeBufferPointer<CChar>, withPrefixes 
     // Okay, we found the prefix, yay. Remember the rest of the line, but
     // ignore leading whitespace.
     if !options.contains(.strictWhitespace) || !options.contains(.matchFullLines) {
-      guard let idx = buffer.index(where: { c in c != (" " as Character).utf8CodePoint && c != ("\t" as Character).utf8CodePoint }) else {
+      guard let idx = buffer.firstIndex(where: { c in c != (" " as Character).utf8CodePoint && c != ("\t" as Character).utf8CodePoint }) else {
         return []
       }
       buffer = buffer.dropFront(idx)
     }
 
     // Scan ahead to the end of line.
-    let EOL : Int = buffer.index(of: ("\n" as Character).utf8CodePoint)
-                  ?? buffer.index(of: ("\r" as Character).utf8CodePoint)
+    let EOL : Int = buffer.firstIndex(of: ("\n" as Character).utf8CodePoint)
+                  ?? buffer.firstIndex(of: ("\r" as Character).utf8CodePoint)
                   ?? buffer.count - 1
 
     // Remember the location of the start of the pattern, for diagnostics.
