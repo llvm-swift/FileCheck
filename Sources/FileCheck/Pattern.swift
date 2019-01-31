@@ -447,7 +447,7 @@ func countNewlines(in str : String) -> (count: Int, firstIndex: String.Index?) {
     // Scan for newline.
 
     // If we can't find a newline, bail.
-    guard let EOL = range.index(of: "\n") ?? range.index(of: "\r") else {
+    guard let EOL = range.firstIndex(of: "\n") ?? range.firstIndex(of: "\r") else {
       return (newlineCount, firstNewLine)
     }
 
