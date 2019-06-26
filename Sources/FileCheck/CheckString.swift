@@ -133,12 +133,6 @@ struct CheckString {
     }
 
     // Count the number of newlines between the previous match and this one.
-    //	  assert(Buffer.data() !=
-    //				 SM.getMemoryBuffer(SM.FindBufferContainingLoc(
-    //										SMLoc::getFromPointer(Buffer.data())))
-    //					 ->getBufferStart() &&
-    //			 "CHECK-SAME can't be the first check in a file")
-
     if countNewlines(in: buffer).count != 0 {
       diagnose(.error,
                at: self.location,
@@ -166,11 +160,6 @@ struct CheckString {
     }
 
     // Count the number of newlines between the previous match and this one.
-    //	  assert(Buffer.data() !=
-    //				 SM.getMemoryBuffer(SM.FindBufferContainingLoc(
-    //										SMLoc::getFromPointer(Buffer.data())))
-    //					 ->getBufferStart(), "CHECK-NEXT can't be the first check in a file")
-
     let (numNewLines, firstNewLine) = countNewlines(in: buffer)
     if numNewLines == 0 {
       diagnose(.error, at: self.location, with: prefix + "-NEXT: is on the same line as previous match", options: options)
