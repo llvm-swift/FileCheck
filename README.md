@@ -54,7 +54,7 @@ comments.
 - Add FileCheck to your `Package.swift` file's dependencies section:
 
 ```swift
-.Package(url: "https://github.com/llvm-swift/FileCheck.git", versions: Version(0,0,1)..<Version(1,0,0))
+.package(url: "https://github.com/llvm-swift/FileCheck.git", "0.0.1"..."1.0.0")
 ```
 
 ## Authors
