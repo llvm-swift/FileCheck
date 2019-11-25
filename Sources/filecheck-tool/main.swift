@@ -1,6 +1,6 @@
 import Foundation
-import Basic
-import SPMUtility
+import TSCBasic
+import TSCUtility
 import FileCheck
 import Rainbow
 

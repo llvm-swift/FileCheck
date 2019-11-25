@@ -12,7 +12,7 @@ let package = Package(
       targets: ["FileCheck"]),
   ],
   dependencies: [
-    .package(url: "https://github.com/apple/swift-package-manager.git", from: "0.1.0"),
+    .package(url: "https://github.com/apple/swift-tools-support-core.git", .exact("0.0.1")),
     .package(url: "https://github.com/onevcat/Rainbow.git", from: "3.0.0"),
   ],
   targets: [
@@ -20,7 +20,7 @@ let package = Package(
       name: "FileCheck"),
     .target(
       name: "filecheck-tool",
-      dependencies: ["FileCheck", "SPMUtility", "Rainbow"]),
+      dependencies: ["FileCheck", "SwiftToolsSupport", "Rainbow"]),
     .testTarget(
       name: "FileCheckTests",
       dependencies: ["FileCheck"]),
