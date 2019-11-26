@@ -2,7 +2,7 @@ import FileCheck
 import XCTest
 import Foundation
 
-class LabelSpec : XCTestCase {
+final class LabelSpec : XCTestCase {
   let outputABC = {
     print([
       "label0:",

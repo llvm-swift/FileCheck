@@ -2,7 +2,7 @@ import FileCheck
 import XCTest
 import Foundation
 
-class MultiPrefixSpec : XCTestCase {
+final class MultiPrefixSpec : XCTestCase {
   func testMultiplePrefixSubstr() {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECKER1", "CHECK"]) {
       // CHECKER1: fo{{o}}

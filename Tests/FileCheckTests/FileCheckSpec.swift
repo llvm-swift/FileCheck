@@ -2,7 +2,7 @@ import FileCheck
 import XCTest
 import Foundation
 
-class FileCheckSpec : XCTestCase {
+final class FileCheckSpec : XCTestCase {
   func testCustomInputBuffer() {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CUSTOMEMPTYBUF-ERR"]) {
       // CUSTOMEMPTYBUF-ERR: error: no check strings found with prefixes

@@ -2,7 +2,7 @@ import FileCheck
 import XCTest
 import Foundation
 
-class RegexScopeSpec : XCTestCase {
+final class RegexScopeSpec : XCTestCase {
   func testRegexScope() {
     let block = { () -> () in
       // CHECK: [[LOCAL:loc.*]]

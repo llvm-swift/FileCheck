@@ -2,7 +2,7 @@ import FileCheck
 import XCTest
 import Foundation
 
-class DAGSpec : XCTestCase {
+final class DAGSpec : XCTestCase {
   func testPrefixOrderInvariant() {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["BA", "AA"]) {
       // BA-DAG: this is the string to be {{matched}}

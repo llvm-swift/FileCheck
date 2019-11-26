@@ -3,7 +3,7 @@ import FileCheck
 import XCTest
 import Foundation
 
-class LineCountSpec : XCTestCase {
+final class LineCountSpec : XCTestCase {
   func testLineCount() {
     let txt = ((1...8).map({ "\($0)" }) + [
         "9 aaa"

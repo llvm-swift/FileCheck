@@ -2,7 +2,7 @@ import FileCheck
 import XCTest
 import Foundation
 
-class DefinesSpec : XCTestCase {
+final class DefinesSpec : XCTestCase {
   func testGlobalDefines() {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["PASSDEF"], withGlobals: ["VALUE":"10"]) {
       // PASSDEF: Value = [[VALUE]]

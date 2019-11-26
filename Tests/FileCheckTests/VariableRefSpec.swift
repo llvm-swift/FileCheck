@@ -2,7 +2,7 @@ import FileCheck
 import XCTest
 import Foundation
 
-class VariableRefSpec : XCTestCase {
+final class VariableRefSpec : XCTestCase {
   func testSameLineVarRef() {
     XCTAssert(fileCheckOutput(of: .stdout) {
       // CHECK: op1 [[REG:r[0-9]+]], {{r[0-9]+}}, [[REG]]
