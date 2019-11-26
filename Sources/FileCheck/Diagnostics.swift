@@ -1,21 +1,17 @@
 import Foundation
+import Chalk
 
 func diagnose(_ kind : DiagnosticKind, at loc : CheckLocation, with message : String, options: FileCheckOptions) {
   let disableColors = options.contains(.disableColors) || isatty(fileno(stdout)) != 1
   if disableColors {
     print("\(kind): \(message)")
   } else {
-    diagnosticStream.write("\(kind): ", with: [.bold, kind.color])
-    diagnosticStream.write("\(message)\n", with: [.bold])
+      print("\(kind, color: kind.color, style: .bold): \(message, style: .bold)")
   }
 
   let msg = loc.message
   if !msg.isEmpty {
-    if disableColors {
-      print(msg)
-    } else {
-      diagnosticStream.write("\(msg)\n")
-    }
+    print(msg)
   }
 }
 
@@ -24,7 +20,7 @@ enum DiagnosticKind: String {
   case warning
   case note
 
-  var color: ANSIColor {
+  var color: Color {
     switch self {
     case .error: return .red
     case .warning: return .magenta
@@ -32,15 +28,6 @@ enum DiagnosticKind: String {
     }
   }
 }
-
-struct StdOutStream: TextOutputStream {
-  mutating func write(_ string: String) {
-    print(string, terminator: "")
-  }
-}
-
-var stdoutStream = StdOutStream()
-var diagnosticStream = ColoredANSIStream(&stdoutStream)
 
 enum CheckLocation {
   case inBuffer(UnsafePointer<CChar>, UnsafeBufferPointer<CChar>)
