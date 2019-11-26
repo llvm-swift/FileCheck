@@ -2,7 +2,6 @@ import Foundation
 import TSCBasic
 import TSCUtility
 import FileCheck
-import Rainbow
 
 func run() -> Int {
   let cli = ArgumentParser(usage: "FileCheck", overview: "")
@@ -73,7 +72,6 @@ func run() -> Int {
     cli.printUsage(on: stderrStream)
     return -1
   }
-  Rainbow.enabled = !options.contains(.disableColors)
 
   let fileHandle: FileHandle
   if let input = results.get(inputFile) {
