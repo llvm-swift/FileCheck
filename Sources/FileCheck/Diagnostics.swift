@@ -1,7 +1,7 @@
 import Foundation
 
 func diagnose(_ kind : DiagnosticKind, at loc : CheckLocation, with message : String, options: FileCheckOptions) {
-  let disableColors = options.contains(.disableColors) || isatty(fileno(stdout)) == 1
+  let disableColors = options.contains(.disableColors) || isatty(fileno(stdout)) != 1
   if disableColors {
     print("\(kind): \(message)")
   } else {
