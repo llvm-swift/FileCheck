@@ -18,7 +18,7 @@ class LabelSpec : XCTestCase {
       "c",
     ].joined(separator: "\n"))
   }
-  
+
   func testLabels() {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECKOK"]) {
       // CHECKOK-LABEL: {{^}}label0:

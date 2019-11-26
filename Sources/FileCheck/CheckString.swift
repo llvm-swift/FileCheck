@@ -285,7 +285,7 @@ struct CheckString {
       // Update the last position with CHECK-DAG matches.
       lastPos = max(matchPos + range.length, lastPos)
     }
-    
+
     return (lastPos, notStrings, finalTable)
   }
 }

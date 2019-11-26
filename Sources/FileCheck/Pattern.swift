@@ -464,7 +464,7 @@ func countNewlines(in str : String) -> (count: Int, firstIndex: String.Index?) {
     //			Range = Range.substr(1)
     //		}
     range = range[range.index(after: range.startIndex)...]
-    
+
     if newlineCount == 1 {
       firstNewLine = range.startIndex
     }
