@@ -145,7 +145,7 @@ public func fileCheckOutput(
       print("FileCheck error: input from file descriptor \(FD) is empty.")
       return false
     }
-    
+
     return true
   }
 
@@ -589,12 +589,12 @@ private func check(
       variableTable = mutVarTable
       checkRegion = checkRegion[checkRegion.index(checkRegion.startIndex, offsetBy: NSMaxRange(range))...]
     }
-    
+
     if j == checkStrings.count {
       break
     }
   }
-  
+
   // Success if no checks failed.
   return !failedChecks
 }

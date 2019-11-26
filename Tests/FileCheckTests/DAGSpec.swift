@@ -14,7 +14,7 @@ class DAGSpec : XCTestCase {
       print("this is the string to be matched")
     })
   }
-  
+
   func testDAGWithInst() {
     XCTAssert(fileCheckOutput(of: .stdout, withPrefixes: ["CHECK-INSTDAG"]) {
       // CHECK-INSTDAG-DAG: add [[REG1:r[0-9]+]], r1, r2
