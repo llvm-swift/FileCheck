@@ -13,10 +13,12 @@ let package = Package(
   ],
   dependencies: [
     .package(url: "https://github.com/apple/swift-tools-support-core.git", .exact("0.0.1")),
+    .package(url: "https://github.com/mxcl/Chalk.git", from: "0.1.0"),
   ],
   targets: [
     .target(
-      name: "FileCheck"),
+      name: "FileCheck",
+      dependencies: ["Chalk"]),
     .target(
       name: "filecheck-tool",
       dependencies: ["FileCheck", "SwiftToolsSupport"]),
