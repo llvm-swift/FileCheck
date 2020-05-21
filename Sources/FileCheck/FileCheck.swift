@@ -567,7 +567,7 @@ private func check(
     if options.contains(.scopedVariables) {
       var localVariables = [String]()
       localVariables.reserveCapacity(16)
-      for (k, v) in variableTable where !k.hasPrefix("$") {
+      for k in variableTable.keys where !k.hasPrefix("$") {
         localVariables.append(k)
       }
 
