@@ -1,101 +1,101 @@
-import Foundation
-import TSCBasic
-import TSCUtility
+import ArgumentParser
 import FileCheck
+import Foundation
 
-func run() -> Int {
-  let cli = ArgumentParser(usage: "FileCheck", overview: "")
-  let binder = ArgumentBinder<FileCheckOptions>()
-  //swiftlint:disable statement_position
-  binder.bind(option:
-    cli.add(option: "--disable-colors", kind: Bool.self,
-            usage: "Disable colorized diagnostics"),
-              to: { if $1 { $0.insert(.disableColors) }
-              else { $0.remove(.disableColors) } })
-  binder.bind(option:
-    cli.add(option: "--use-strict-whitespace",
-            kind: Bool.self,
-            usage: "Do not treat all horizontal whitespace as equivalent"),
-              to: { if $1 { $0.insert(.strictWhitespace) }
-              else { $0.remove(.strictWhitespace) } })
-  binder.bind(option:
-    cli.add(option: "--allow-empty-input", shortName: "-e",
-            kind: Bool.self,
-            usage: """
-                   Allow the input file to be empty. This is useful when \
-                   making checks that some error message does not occur, \
-                   for example.
-                   """),
-              to: { if $1 { $0.insert(.allowEmptyInput) }
-              else { $0.remove(.allowEmptyInput) } })
-  binder.bind(option:
-    cli.add(option: "--match-full-lines",
-            kind: Bool.self,
-            usage: """
-                   Require all positive matches to cover an entire input line. \
-                   Allows leading and trailing whitespace if \
-                   --strict-whitespace is not also used.
-                   """),
-              to: { if $1 { $0.insert(.matchFullLines) }
-              else { $0.remove(.matchFullLines) } })
-  let prefixes =
-    cli.add(option: "--prefixes", kind: [String].self,
-            usage: """
-                   Specifies one or more prefixes to match. By default these \
-                   patterns are prefixed with “CHECK”.
-                   """)
+private extension FileCheckOptions {
+    init(_ command: FileCheckCommand) {
+        var options = FileCheckOptions()
+        if command.disableColors {
+            options.insert(.disableColors)
+        }
 
-  let inputFile =
-    cli.add(option: "--input-file", shortName: "-i",
-            kind: String.self,
-            usage: "The file to use for checked input. Defaults to stdin.")
+        if command.useStrictWhitespace {
+            options.insert(.strictWhitespace)
+        }
 
-  let file =
-    cli.add(positional: "", kind: String.self,
-            usage: "")
+        if command.allowEmptyInput {
+            options.insert(.allowEmptyInput)
+        }
 
-  let args = Array(CommandLine.arguments.dropFirst())
-  guard let results = try? cli.parse(args) else {
-    cli.printUsage(on: stderrStream)
-    return -1
-  }
+        if command.matchFullLines {
+            options.insert(.matchFullLines)
+        }
 
-  guard let filePath = results.get(file) else {
-    print("FileCheck error: No input file was provided.")
-    return -1
-  }
-
-  var options = FileCheckOptions()
-  do {
-    try binder.fill(parseResult: results, into: &options)
-  } catch {
-    cli.printUsage(on: stderrStream)
-    return -1
-  }
-
-  let fileHandle: FileHandle
-  if let input = results.get(inputFile) {
-    guard let handle = FileHandle(forReadingAtPath: input) else {
-      print("FileCheck error: unable to open check file at path \(inputFile).")
-      return -1
+        self = options
     }
-    fileHandle = handle
-  } else {
-    fileHandle = .standardInput
-  }
-  var checkPrefixes = results.get(prefixes) ?? []
-  checkPrefixes.append("CHECK")
-
-  let matchedAll = fileCheckOutput(of: .stdout,
-                                   withPrefixes: checkPrefixes,
-                                   checkNot: [],
-                                   against: .filePath(filePath),
-                                   options: options) {
-    // FIXME: Better way to stream this data?
-    FileHandle.standardOutput.write(fileHandle.readDataToEndOfFile())
-  }
-
-  return matchedAll ? 0 : -1
 }
 
-exit(Int32(run()))
+struct FileCheckCommand: ParsableCommand {
+    static var configuration = CommandConfiguration(commandName: "filecheck")
+
+    @Flag(help: "Disable colorized diagnostics.")
+    var disableColors = false
+
+    @Flag(help: "Do not treat all horizontal whitespace as equivalent.")
+    var useStrictWhitespace = false
+
+    @Flag(
+        name: [.customShort("e"), .long],
+        help: """
+        Allow the input file to be empty. This is useful when \
+        making checks that some error message does not occur, \
+        for example.
+        """
+    )
+    var allowEmptyInput = false
+
+    @Flag(help: """
+    Require all positive matches to cover an entire input line. \
+    Allows leading and trailing whitespace if \
+    --strict-whitespace is not also used.
+    """)
+    var matchFullLines = false
+
+    @Option(
+        help: """
+        Specifies one or more prefixes to match. By default these \
+        patterns are prefixed with “CHECK”.
+        """
+    )
+    var prefixes: [String] = []
+
+    @Option(
+        name: .shortAndLong,
+        help: "The file to use for checked input. Defaults to stdin."
+    )
+    var inputFile: String?
+
+    @Argument
+    var file: String
+
+    mutating func run() throws {
+        let fileHandle: FileHandle
+        if let input = inputFile {
+            guard let handle = FileHandle(forReadingAtPath: input) else {
+                throw ValidationError("unable to open check file at path \(input).")
+            }
+
+            fileHandle = handle
+        } else {
+            fileHandle = .standardInput
+        }
+
+        let checkPrefixes = prefixes + ["CHECK"]
+        let matchedAll = fileCheckOutput(of: .stdout,
+                                         withPrefixes: checkPrefixes,
+                                         checkNot: [],
+                                         against: .filePath(file),
+                                         options: FileCheckOptions(self)) {
+
+            // FIXME: Better way to stream this data?
+            FileHandle.standardOutput.write(fileHandle.readDataToEndOfFile())
+        }
+
+
+        if !matchedAll {
+            throw ExitCode.failure
+        }
+    }
+}
+
+FileCheckCommand.main()

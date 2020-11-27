@@ -12,7 +12,7 @@ let package = Package(
       targets: ["FileCheck"]),
   ],
   dependencies: [
-    .package(url: "https://github.com/apple/swift-tools-support-core.git", .exact("0.0.1")),
+    .package(url: "https://github.com/apple/swift-argument-parser", from: "0.3.1"),
     .package(url: "https://github.com/mxcl/Chalk.git", from: "0.1.0"),
   ],
   targets: [
@@ -21,7 +21,7 @@ let package = Package(
       dependencies: ["Chalk"]),
     .target(
       name: "filecheck-tool",
-      dependencies: ["FileCheck", "SwiftToolsSupport"]),
+      dependencies: ["FileCheck", "ArgumentParser"]),
     .testTarget(
       name: "FileCheckTests",
       dependencies: ["FileCheck"]),
