@@ -110,7 +110,7 @@ extension FileCheckSource: ExpressibleByStringLiteral {
 /// - parameter checkNot: Specifies zero or more prefixes to implicitly reject
 ///   in the output stream.  This can be used to implement LLVM-verifier-like
 ///   checks.
-/// - parameter file: The file to check against.  Defaults to the file that
+/// - parameter against: The source of Check Strings  to check against.  Defaults to the file that
 ///   contains the call to `fileCheckOutput`.
 /// - parameter options: Optional arguments to modify the behavior of the check.
 /// - parameter block: The block in which output will be emitted to the given
