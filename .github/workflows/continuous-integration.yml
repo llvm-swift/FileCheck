@@ -26,11 +26,9 @@ jobs:
     strategy:
       matrix:
         swift:
-          - 5.2.5
           - 5.5.3
         ubuntu:
           - bionic
-          - xenial
           - focal
         action:
           - build
