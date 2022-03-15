@@ -1,9 +1,10 @@
-// swift-tools-version:5.0
+// swift-tools-version:5.1
 
 import PackageDescription
 
 let package = Package(
   name: "FileCheck",
+  platforms: [.macOS(.v10_15)],
   products: [
     .executable(name: "filecheck",
                 targets: ["filecheck-tool"]),
@@ -12,7 +13,7 @@ let package = Package(
       targets: ["FileCheck"]),
   ],
   dependencies: [
-    .package(url: "https://github.com/apple/swift-argument-parser", from: "0.3.1"),
+    .package(url: "https://github.com/apple/swift-argument-parser", from: "1.1.0"),
     .package(url: "https://github.com/mxcl/Chalk.git", from: "0.1.0"),
   ],
   targets: [
